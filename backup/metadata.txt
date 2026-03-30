@@ -1,0 +1,34 @@
+rkflash0p7 = rootfs1.img
+rkflash0p9 = rootfs2.img
+rkflash0p6 = boot1.img
+rkflash0p8 = boot2.img
+rkflash0p5 = sys.img
+rkflash0p3 = mx.img
+rkflash0p4 = my.img
+rkflash0p10 = data.img
+rkflash0p1 = uboot.img
+rkflash0p2 = trust.img
+
+
+Process:
+
+# On the robot
+nc -l -p 9999 < /dev/rkflash0p7
+
+# On host machine
+nc 192.168.0.17 9999 > rootfs1.img
+
+# (repeat for all partitions)
+
+
+~ # blkid
+/dev/rkflash0p1: PARTLABEL="uboot" PARTUUID="47170000-0000-4b07-8000-6b5a0000326a"
+/dev/rkflash0p2: PARTLABEL="trust" PARTUUID="1c030000-0000-4441-8000-36a000002c8e"
+/dev/rkflash0p3: PARTLABEL="mx" PARTUUID="656c0000-0000-4b4f-8000-1adb000034a1"
+/dev/rkflash0p4: PARTLABEL="my" PARTUUID="ab5a0000-0000-4626-8000-5e9500004dab"
+/dev/rkflash0p5: PARTLABEL="sys" PARTUUID="75150000-0000-4f3c-8000-0e5500007fb5"
+/dev/rkflash0p6: PARTLABEL="boot1" PARTUUID="4b2d0000-0000-4e0b-8000-78a4000056c5"
+/dev/rkflash0p7: TYPE="squashfs" PARTLABEL="rootfs1" PARTUUID="b5740000-0000-4912-8000-3009000061e6"
+/dev/rkflash0p8: PARTLABEL="boot2" PARTUUID="3c7f0000-0000-4a54-8000-0d0c0000341d"
+/dev/rkflash0p9: TYPE="squashfs" PARTLABEL="rootfs2" PARTUUID="672a0000-0000-4858-8000-2a3500006874"
+/dev/rkflash0p10: LABEL="datafs" UUID="e6f74d2b-7220-46cb-9834-f290d46bd784" TYPE="ext4" PARTLABEL="data" PARTUUID="bf110000-0000-4c27-8000-660d000016f2"
