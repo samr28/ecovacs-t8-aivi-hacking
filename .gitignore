@@ -2,3 +2,5 @@
 CLAUDE.md
 backup/
 scripts/config.py
+__pycache__/
+*.pyc

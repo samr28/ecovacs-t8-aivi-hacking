@@ -258,88 +258,96 @@ def _encode_conn_header(fields: dict) -> bytes:
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-def main(log_path: str | None = None, duration: float | None = None):
-    def _exit(sig=None, frame=None):
-        cleanup_tunnels()
-        sys.stdout.write('\033[?25h\n')
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT,  _exit)
-    signal.signal(signal.SIGTERM, _exit)
-
-    # ── 1. Check master tunnel ───────────────────────────────────────────────
+def _connect() -> socket.socket:
+    """Set up all SSH tunnels and return a connected, subscribed TCPROS socket."""
     print('Checking master tunnel on localhost:11311 ...')
     try:
         master = xmlrpc.client.ServerProxy(MASTER_URL)
         master.getSystemState('/')
     except Exception:
-        print('Master tunnel not reachable. Starting it ...')
+        print('  Not reachable — starting tunnel ...')
         proc = subprocess.Popen(
             ['ssh', '-N', '-o', 'StrictHostKeyChecking=no',
-             '-L', '11311:127.0.0.1:11311', ROBOT],
+             '-L', f'{ROS_MASTER_PORT}:127.0.0.1:{ROS_MASTER_PORT}', ROBOT],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
         _tunnels.append(proc)
         for _ in range(25):
             try:
-                with socket.create_connection(('localhost', 11311), timeout=0.2):
+                with socket.create_connection(('localhost', ROS_MASTER_PORT), timeout=0.2):
                     pass
                 break
             except OSError:
                 time.sleep(0.2)
         master = xmlrpc.client.ServerProxy(MASTER_URL)
 
-    # ── 2. Look up /node XML-RPC URI ─────────────────────────────────────────
     print('Looking up /node ...')
     code, msg, node_uri = master.lookupNode(CALLER_ID, '/node')
     if code != 1:
         sys.exit(f'lookupNode failed: {msg}')
 
-    robot_node_port = urlparse(node_uri).port
-    print(f'  /node XML-RPC port on robot: {robot_node_port}')
+    robot_node_port  = urlparse(node_uri).port
+    local_node_port  = open_tunnel(robot_node_port)
+    print(f'  XML-RPC  robot:{robot_node_port} → local:{local_node_port}')
 
-    # ── 3. Tunnel the node XML-RPC port ──────────────────────────────────────
-    local_node_port = open_tunnel(robot_node_port)
-    print(f'  Tunneled to localhost:{local_node_port}')
     node = xmlrpc.client.ServerProxy(f'http://localhost:{local_node_port}')
-
-    # ── 4. Request TCPROS topic port ─────────────────────────────────────────
-    print(f'Requesting TCPROS port for {TOPIC} ...')
     code, msg, proto = node.requestTopic(CALLER_ID, TOPIC, [['TCPROS']])
     if code != 1:
         sys.exit(f'requestTopic failed: {msg}')
 
-    _, _, robot_tcpros_port = proto
-    print(f'  TCPROS port on robot: {robot_tcpros_port}')
-
-    # ── 5. Tunnel the TCPROS port ─────────────────────────────────────────────
+    robot_tcpros_port = proto[2]
     local_tcpros_port = open_tunnel(robot_tcpros_port)
-    print(f'  Tunneled to localhost:{local_tcpros_port}')
+    print(f'  TCPROS   robot:{robot_tcpros_port} → local:{local_tcpros_port}')
 
-    # ── 6. Connect as TCPROS subscriber ──────────────────────────────────────
-    print('Connecting ...')
     sock = socket.socket()
     sock.connect(('localhost', local_tcpros_port))
     sock.sendall(_encode_conn_header({
-        'callerid'  : CALLER_ID,
-        'topic'     : TOPIC,
-        'type'      : TOPIC_TYPE,
-        'md5sum'    : '*',
+        'callerid'   : CALLER_ID,
+        'topic'      : TOPIC,
+        'type'       : TOPIC_TYPE,
+        'md5sum'     : '*',
         'tcp_nodelay': '0',
     }))
     _read_framed(sock)   # consume publisher connection header
-    print('Subscribed. Streaming...\n')
-    time.sleep(0.3)
+    print('Subscribed.\n')
+    return sock
 
-    # ── 7. Decode and display ─────────────────────────────────────────────────
-    sys.stdout.write('\033[?25l\033[2J')   # hide cursor, clear screen
-    sys.stdout.flush()
 
+def _print_line(d: dict):
+    """Single compact line per message — good for streaming / piping."""
+    p = d['pose']
+    chg = CHARGE_STATES.get(d['charge_state'], '?')
+    bump = ''.join(k for k, v in sorted(d['bump'].items()) if v)
+    print(
+        f"seq={d['seq']:>8}  "
+        f"bat={d['battery']:>3d}%{'⚡' if d['on_charger'] else '  '}  "
+        f"pos=({p['x']:+.2f},{p['y']:+.2f},{p['theta']:+.3f})  "
+        f"bump=[{bump or '-'}]  "
+        f"LDS={d['lds_count']}pts  "
+        f"{chg}"
+    )
+
+
+def main(watch: bool = False, log_path: str | None = None, duration: float | None = None):
+    def _exit(sig=None, frame=None):
+        cleanup_tunnels()
+        if watch:
+            sys.stdout.write('\033[?25h\n')   # restore cursor
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT,  _exit)
+    signal.signal(signal.SIGTERM, _exit)
+
+    sock       = _connect()
     log_file   = open(log_path, 'w') if log_path else None
     start_time = time.time()
     last_time  = start_time
     hz         = 0.0
     count      = 0
+
+    if watch:
+        sys.stdout.write('\033[?25l\033[2J')   # hide cursor, clear screen
+        sys.stdout.flush()
 
     try:
         while True:
@@ -350,8 +358,7 @@ def main(log_path: str | None = None, duration: float | None = None):
             try:
                 d = decode(raw)
             except Exception as e:
-                sys.stdout.write(f'\033[Hdecode error: {e}\n')
-                sys.stdout.flush()
+                print(f'decode error: {e}', file=sys.stderr)
                 continue
 
             if log_file:
@@ -365,7 +372,11 @@ def main(log_path: str | None = None, duration: float | None = None):
                 count     = 0
                 last_time = now
 
-            render(d, hz)
+            if watch:
+                render(d, hz)
+            else:
+                _print_line(d)
+
     finally:
         if log_file:
             log_file.close()
@@ -373,8 +384,9 @@ def main(log_path: str | None = None, duration: float | None = None):
 
 
 if __name__ == '__main__':
-    ap = argparse.ArgumentParser(description='Live /robot/Robot decoder')
-    ap.add_argument('--log',      metavar='FILE', help='also write decoded messages as JSON lines to FILE')
-    ap.add_argument('--duration', metavar='SECS', type=float, default=None, help='exit after N seconds')
+    ap = argparse.ArgumentParser(description='/robot/Robot decoder')
+    ap.add_argument('--watch',    action='store_true', help='top-like live dashboard (refreshes in place)')
+    ap.add_argument('--log',      metavar='FILE',      help='write decoded messages as JSON lines to FILE')
+    ap.add_argument('--duration', metavar='SECS',      type=float, default=None, help='exit after N seconds')
     args = ap.parse_args()
-    main(log_path=args.log, duration=args.duration)
+    main(watch=args.watch, log_path=args.log, duration=args.duration)
