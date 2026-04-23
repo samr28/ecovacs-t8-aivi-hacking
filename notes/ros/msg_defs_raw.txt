@@ -1,0 +1,2933 @@
+===TOPIC: /ScheduleEvent
+===TYPE: schedule/scheduleevevt
+===MD5: f19a13b9bfdc5a0304ba33488628c5d8
+#type enum
+uint8 SCHEDULE_AUTO = 0
+uint8 SCHEDULE_AREA = 1
+uint8 SCHEDULE_CHANGE = 2
+uint8 SCHEDULE_IN_BLOCK_TIME = 3
+uint8 SCHEDULE_MAP_CHARGE = 4
+uint8 SCHEDULE_AREA_CHARGE = 5
+uint8 SCHEDULE_PATRO = 6
+uint8 type    #SCHEDULE_TYPE
+
+uint32[] mids 
+
+
+
+===TOPIC: /ai/AiMissing
+===TYPE: ai/AiMissing
+===MD5: 8c5550d7fbcc014383a04a922eef282c
+#补扫点信息
+AiMissingType[] AiMissing
+
+#补扫点绑定map id
+uint32 mid
+
+#补扫点更新类型
+uint8 AI_MISSING_UPDATE_NEWCLEAN = 0	#新的清扫
+uint8 AI_MISSING_UPDATE_TIMEOUT = 1		#过0点清空
+uint8 update_type
+================================================================================
+MSG: ai/AiMissingType
+#识别类型
+uint8 OBJ_DET_TYPE_UNDEFINED = 0
+uint8 OBJ_DET_TYPE_BIN = 1
+uint8 OBJ_DET_TYPE_CHARGE = 2 
+uint8 OBJ_DET_TYPE_CLOTH = 3
+uint8 OBJ_DET_TYPE_RUG = 4
+uint8 OBJ_DET_TYPE_SHOE = 5
+uint8 OBJ_DET_TYPE_WIRE = 6
+uint8 OBJ_DET_TYPE_BOWL = 7
+uint8 OBJ_DET_TYPE_RAIL = 8
+uint32 ai_type  
+	
+uint32 id
+
+#位置: mm
+int32 pose_x 		
+int32 pose_y
+
+uint8 cleanned
+
+===TOPIC: /aiDetectRslt
+===TYPE: ai/AIDetResult
+===MD5: a392c171dc2300e9f6d7e91feeb0c80c
+Header header
+AIObjectDetResult[] objDetResults
+uint32 blurRatio
+
+prediction/Pose pose
+uint32[] wheelSpeed	# left and right wheelSpeed
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+
+================================================================================
+MSG: ai/AIObjectDetResult
+float32[] rect		# xmin xmax ymin ymax
+float32 score
+
+uint8 OBJ_DET_TYPE_UNDEFINED = 0
+uint8 OBJ_DET_TYPE_BIN = 1
+uint8 OBJ_DET_TYPE_CHARGE = 2 
+uint8 OBJ_DET_TYPE_CLOTH = 3
+uint8 OBJ_DET_TYPE_RUG = 4
+uint8 OBJ_DET_TYPE_SHOE = 5
+uint8 OBJ_DET_TYPE_WIRE = 6
+uint8 OBJ_DET_TYPE_BOWL = 7
+uint8 OBJ_DET_TYPE_RAIL = 8
+uint8 class_id
+
+float32[] distance	# leftx lefty rightx righty
+uint8[] distanceType
+float32 refineScore
+
+
+
+================================================================================
+MSG: prediction/Pose
+Header header
+float32 x
+float32 y
+float32 theta
+
+===TOPIC: /alert/Alerts
+===TYPE: alert/Alerts
+===MD5: cc98b954dcec4eb014849fa8ae90fc33
+AlertInfo[] alerts
+================================================================================
+MSG: alert/AlertInfo
+# alert type.
+uint8 type
+
+# 0 means idle , 1 means triggered.
+uint8 state 
+
+===TOPIC: /alert/DirtboxAndFall
+===TYPE: alert/DirtboxAndFall
+===MD5: 45312c794ecf39bac8386da021926dbd
+DirtboxAndFallinfo[] DirtboxAndFall
+
+================================================================================
+MSG: alert/DirtboxAndFallinfo
+#type enum
+uint8 ALERT_DIRT_BOX_STATE = 0
+uint8 ALERT_FALL_ERROR = 1
+uint8 alert_type
+
+#value 1 has alert,0 cancel
+uint8 value
+
+===TOPIC: /alert/LdsErrorData
+===TYPE: alert/LdsErrorData
+===MD5: f43a8e1b362b75baa741461b46adc7e0
+#hex format of raw data of lds.
+uint8[] data
+
+===TOPIC: /audio/AudioPlay
+===TYPE: audio/AudioPlay
+===MD5: 721995c8b2270bf8b696b62a8f21be90
+# audio play function
+uint8 AUDIO_PLAY_PLAY_AUDIO	=	0
+uint8 AUDIO_PLAY_SET_SILENT	=	1
+
+uint8 audiomode		# audio play function
+uint8 value			# index or silent value
+
+# audio play index
+uint8 POWER_UP = 0
+uint8 SHEDULE_SET	=	1
+uint8 SCHEDULE_CANCEL	=	2
+uint8 WHEEL_FALL	=	3
+uint8 WHEEL_ERROR	=	4
+uint8 ROBOT_CONFUSED	=	5
+uint8 NO_PAILIN	=	6
+uint8 BRUSH_ERROR	=	7
+uint8 LOW_BATTERY	=	8
+uint8 LOW_BATTERY_TO_RETURN	=	9
+uint8 LDS_ERROR	=	10
+uint8 WIFI_CONNECTED	=	11
+uint8 TIME_SYNCHRONIZED	=	12
+uint8 WIFI_DISCONNECTED	=	13
+uint8 CLEAN_COMPLETE	=	14
+uint8 GAIN_AREA	=	15
+uint8 MAP_LOADING	=	16
+uint8 MAP_COMPLETE	=	17
+uint8 DI	=	18
+uint8 START_WORK	=	19
+uint8 START_AREA_CLEAN	=	20
+uint8 START_SPOT_CLEAN	=	21
+uint8 CONTINUE_WORK	=	22
+uint8 CHARGING	=	23
+uint8 GO_CHARGE_START	=	24
+uint8 GO_CHARGE_FAIL	=	25
+uint8 BATTERY_LOW_PLS_CHARGE	=	26
+uint8 BATTERY_LOW_DEEBOT_OFF	=	27
+uint8 PLS_START_HORIZONTAL	=	28
+uint8 PAUSE	=	29
+uint8 CHARGE_ERROR	=	30
+uint8 I_AM_HERE	=	31
+uint8 BRUSH_MAIN_ERROR	=	32
+uint8 DOWNIN_ERROR	=	33
+uint8 PROGRAM_ERROR	=	34
+uint8 AWAKE	=	35
+uint8 BRUSH_SIDE_ERROR	=	36
+uint8 START_RELOCATION	=	37
+uint8 RESTORE_MAP_START	=	38
+uint8 RESTORE_MAP_OK	=	39
+uint8 RESTORE_MAP_NG	=	40
+uint8 ROOM_ANALYZE	=	41
+uint8 PLEASE_MANUAL_CHARGE	=	42
+uint8 PLEASE_REMOVE_WATERBOX	=	43
+uint8 WATER_BOX_HAS_SETTED	=	44
+uint8 START_CONTINUE_WORK	=	45
+uint8 START_FACTORY_RESET	=	46
+uint8 START_CUSTOM_CLEAN	=	47
+uint8 START_EDGE_CLEAN	=	48
+uint8 STOP_CLEAN	=	49
+uint8 STOP_RETURN	=	50
+uint8 START_CHARGING	=	51
+uint8 FAIL_TO_FIND_CHARGE	=	52
+uint8 LOW_BATTERY_CANCEL_SCHEDULE	=	53
+uint8 CONTINUE_CLEAN_WHEN_CHARGE_FULL	=	54
+uint8 LONG_TIME_BUMPING	=	55
+uint8 NO_PAILIN_CANCEL_SCHEDULE	=	56
+uint8 LONG_TIME_BUMPING_CANCEL_SCHEDULE	=	57
+uint8 DOWNIN_ERROR_CANCEL_SCHEDULE	=	58
+uint8 WHEEL_FALL_CANCEL_SCHEDULE	=	59
+uint8 WHEEL_FALL_TO_MOVE_TO_ANOTHER_PLACE	=	60
+uint8 SWITCH_WATER_LEVEL_TO_LOW	=	61
+uint8 SWITCH_WATER_LEVEL_TO_MIDDILE	=	62
+uint8 SWITCH_WATER_LEVEL_TO_HIGH	=	63
+uint8 SWITCH_WATER_LEVEL_TO_ULTRAHIGH	=	64
+uint8 RELOCATION_SUCCESS_TO_RESUME_CLEAN	=	65
+uint8 RELOCATION_SUCCESS_TO_GO_CHARGE	=	66
+uint8 RELOCATION_FAILED_MAP_UPDATED	=	67
+uint8 RELOCATION_SUCCESS_TO_START_CLEAN	=	68
+uint8 RELOCATION_FAILED_TO_START_CLEAN	=	69
+uint8 PLEASE_CHANGE_MOP	=	70
+uint8 PLEASE_TAKE_OFF_MOP_IN_TIME	=	71
+uint8 FILTER_IS_BLOCKED	=	72
+uint8 RELOCATION_FAILED_TO_START_GO_CHARGE	=	73
+uint8 START_SMART_CONFIG	=	74
+uint8 FILTER_IS_OVERDUE	=	75
+uint8 SIDE_BRUSH_IS_OVERDUE	=	76
+uint8 MAIN_BRUSH_IS_OVERDUE	=	77
+
+
+===TOPIC: /audio/AudioPlayControl
+===TYPE: audio/AudioPlayControl
+===MD5: 6134dac65ccfbd5ea4989f1fb6d9db66
+uint8[] audioIdx
+
+
+===TOPIC: /audio/AudioPlayNew
+===TYPE: audio/AudioPlayNew
+===MD5: bdf8b0a0cbf65409c309809a339df15b
+# audio play function
+uint8 AUDIO_PLAY_PLAY_AUDIO	=	0
+uint8 AUDIO_PLAY_SET_SILENT	=	1
+
+uint8 audiomode		# audio play function
+uint8 value			# index or silent value
+
+# audio play index
+uint8 POWER_UP = 0
+uint8 SHEDULE_SET	=	1
+uint8 SCHEDULE_CANCEL	=	2
+uint8 WHEEL_FALL	=	3
+uint8 WHEEL_ERROR	=	4
+uint8 ROBOT_CONFUSED	=	5
+uint8 NO_PAILIN	=	6
+uint8 BRUSH_ERROR	=	7
+uint8 LOW_BATTERY	=	8
+uint8 LOW_BATTERY_TO_RETURN	=	9
+uint8 LDS_ERROR	=	10
+uint8 WIFI_CONNECTED	=	11
+uint8 TIME_SYNCHRONIZED	=	12
+uint8 WIFI_DISCONNECTED	=	13
+uint8 CLEAN_COMPLETE	=	14
+uint8 GAIN_AREA	=	15
+uint8 MAP_LOADING	=	16
+uint8 MAP_COMPLETE	=	17
+uint8 DI	=	18
+uint8 START_WORK	=	19
+uint8 START_AREA_CLEAN	=	20
+uint8 START_SPOT_CLEAN	=	21
+uint8 CONTINUE_WORK	=	22
+uint8 CHARGING	=	23
+uint8 GO_CHARGE_START	=	24
+uint8 GO_CHARGE_FAIL	=	25
+uint8 BATTERY_LOW_PLS_CHARGE	=	26
+uint8 BATTERY_LOW_DEEBOT_OFF	=	27
+uint8 PLS_START_HORIZONTAL	=	28
+uint8 PAUSE	=	29
+uint8 CHARGE_ERROR	=	30
+uint8 I_AM_HERE	=	31
+uint8 BRUSH_MAIN_ERROR	=	32
+uint8 DOWNIN_ERROR	=	33
+uint8 PROGRAM_ERROR	=	34
+uint8 AWAKE	=	35
+uint8 BRUSH_SIDE_ERROR	=	36
+uint8 START_RELOCATION	=	37
+uint8 RESTORE_MAP_START	=	38
+uint8 RESTORE_MAP_OK	=	39
+uint8 RESTORE_MAP_NG	=	40
+uint8 ROOM_ANALYZE	=	41
+uint8 PLEASE_MANUAL_CHARGE	=	42
+uint8 PLEASE_REMOVE_WATERBOX	=	43
+uint8 WATER_BOX_HAS_SETTED	=	44
+uint8 START_CONTINUE_WORK	=	45
+uint8 START_FACTORY_RESET	=	46
+uint8 START_CUSTOM_CLEAN	=	47
+uint8 START_EDGE_CLEAN	=	48
+uint8 STOP_CLEAN	=	49
+uint8 STOP_RETURN	=	50
+uint8 START_CHARGING	=	51
+uint8 FAIL_TO_FIND_CHARGE	=	52
+uint8 LOW_BATTERY_CANCEL_SCHEDULE	=	53
+uint8 CONTINUE_CLEAN_WHEN_CHARGE_FULL	=	54
+uint8 LONG_TIME_BUMPING	=	55
+uint8 NO_PAILIN_CANCEL_SCHEDULE	=	56
+uint8 LONG_TIME_BUMPING_CANCEL_SCHEDULE	=	57
+uint8 DOWNIN_ERROR_CANCEL_SCHEDULE	=	58
+uint8 WHEEL_FALL_CANCEL_SCHEDULE	=	59
+uint8 WHEEL_FALL_TO_MOVE_TO_ANOTHER_PLACE	=	60
+uint8 SWITCH_WATER_LEVEL_TO_LOW	=	61
+uint8 SWITCH_WATER_LEVEL_TO_MIDDILE	=	62
+uint8 SWITCH_WATER_LEVEL_TO_HIGH	=	63
+uint8 SWITCH_WATER_LEVEL_TO_ULTRAHIGH	=	64
+uint8 RELOCATION_SUCCESS_TO_RESUME_CLEAN	=	65
+uint8 RELOCATION_SUCCESS_TO_GO_CHARGE	=	66
+uint8 RELOCATION_FAILED_MAP_UPDATED	=	67
+uint8 RELOCATION_SUCCESS_TO_START_CLEAN	=	68
+uint8 RELOCATION_FAILED_TO_START_CLEAN	=	69
+uint8 PLEASE_CHANGE_MOP	=	70
+uint8 PLEASE_TAKE_OFF_MOP_IN_TIME	=	71
+uint8 FILTER_IS_BLOCKED	=	72
+uint8 RELOCATION_FAILED_TO_START_GO_CHARGE	=	73
+uint8 START_SMART_CONFIG	=	74
+uint8 FILTER_IS_OVERDUE	=	75
+uint8 SIDE_BRUSH_IS_OVERDUE	=	76
+uint8 MAIN_BRUSH_IS_OVERDUE	=	77
+uint8 WATER_IS_LOW	=	78
+uint8 START_REPAIR_CLEAN	=	79
+uint8 CRUISER_COMPLETE_RETURN	=	80
+uint8 STRIVE_BOX_INSTALL	=	81
+uint8 PLEASE_START_NO_MOP	=	82
+uint8 CHARGE_DELICACY_MODE	=	83
+uint8 CHARGE_EFFICIENT_MODE	=	84
+uint8 SCHEDULE_CANCEL_CLEAN	=	85
+uint8 SCHEDULE_CANCEL_PATROL =	86
+uint8 START_GO_TARGET =	87
+uint8 GET_TO_TARGET =	88
+uint8 START_PATROL =	89
+uint8 CONTINUE_GO =	90
+uint8 STRIVE_BOX_NOT_ASSIGN = 91
+uint8 RELOCATION_SUCCESS_TO_RESUME_AICOVER_CLEAN = 92
+uint8 RELOCATION_SUCCESS_TO_RESUME_TASK = 93
+uint8 RELOCATION_FAILED_TO_END_AICOVER_CLEAN = 94
+uint8 RELOCATION_FAILED_TO_END_TASK = 95
+uint8 PLEASE_CHANGE_MOP_NEW = 96
+uint8 PLEASE_TAKE_OFF_STRIVE_BOX = 97
+uint8 LONG_TIME_NO_TASK_START_RETURN = 98
+uint8 START_AUTO_COLECT_DIRT = 99
+uint8 PLEASE_INSTALL_DIRT_BAG = 100
+uint8 PLEASE_CHANGE_DIRT_BAG = 101
+uint8 DTOF_STOP_PLEASE_DETECTION = 102
+uint8 NO_CRUISE_SPOT_SCHEDULE_CANCEL = 103
+uint8 PLEASE_CLOSE_DIRT_COVER = 104
+uint8 CANNOT_START_COLLECT = 105
+uint8 ADVISE_TAKEOFF_WATERBOX = 106
+
+
+
+
+===TOPIC: /bigdata/BigDataBasicInfo
+===TYPE: bigdata/BigDataBasicInfo
+===MD5: b7079909d87257a083144388e55bde00
+   uint8 batteryValue 
+   uint8 waterboxValue #0 uninstall 1 install 2 ultrawaterbox
+   uint8 sleepValue #0 exit sleep 1 sleep
+   uint8 chargeValue #0 uncharge 1 charging 2 chargefull 3 3Dcharging
+   uint8 robotstateValue #0 idle 1 running 2 pause 3 sleep
+   string robotPosValue
+   string chargePosValue
+
+   
+   
+   
+
+===TOPIC: /bigdata/BigDataBuildMapStruct
+===TYPE: bigdata/BigDataBuildMapStruct
+===MD5: 5fc031fa2bf7d1a4eaee4fdb54e720d5
+BIG_DATA_ACTION action
+RESULT result
+   
+   
+   
+================================================================================
+MSG: bigdata/BIG_DATA_ACTION
+	#bigdata action
+	uint8 BIG_DATA_START=0
+	uint8 BIG_DATA_STOP=1
+	
+	uint8 action
+================================================================================
+MSG: bigdata/RESULT
+	uint8 BIG_DATA_SUCCESS=1
+	uint8 BIG_DATA_FAIL=0
+	
+	uint8 result
+
+===TOPIC: /bigdata/BigDataCharge
+===TYPE: bigdata/BigDataCharge
+===MD5: fbde843d25bb0f041b621f1f100c8ae6
+  uint8 startType #0 default 1 joint 2 explore 3 plan 4 back
+  uint8 finishType #0 succeed 1 externStop 2 fail 3 noSignal
+  uint8 planResult #0 succeed 1 fail 2 noPlan
+  uint32 planElapsedTime
+  uint32 totalElapsedTime
+  uint32 jointElapsedTime
+
+===TOPIC: /bigdata/BigDataDockStruct
+===TYPE: bigdata/BigDataDockStruct
+===MD5: 5fc031fa2bf7d1a4eaee4fdb54e720d5
+BIG_DATA_ACTION action
+RESULT result
+   
+   
+   
+================================================================================
+MSG: bigdata/BIG_DATA_ACTION
+	#bigdata action
+	uint8 BIG_DATA_START=0
+	uint8 BIG_DATA_STOP=1
+	
+	uint8 action
+================================================================================
+MSG: bigdata/RESULT
+	uint8 BIG_DATA_SUCCESS=1
+	uint8 BIG_DATA_FAIL=0
+	
+	uint8 result
+
+===TOPIC: /bigdata/BigDataONorOFFlineStruct
+===TYPE: bigdata/BigDataONorOFFlineStruct
+===MD5: 293dcd80c33fd94bbeb1d444230fbf19
+	BIG_DATA_ACTION act
+	string Bassid
+	string RobotMac
+	int8 rssi
+	int8 freq
+================================================================================
+MSG: bigdata/BIG_DATA_ACTION
+	#bigdata action
+	uint8 BIG_DATA_START=0
+	uint8 BIG_DATA_STOP=1
+	
+	uint8 action
+
+===TOPIC: /bigdata/BigDataPowerOnOffStruct
+===TYPE: bigdata/BigDataPowerOnOffStruct
+===MD5: 76478c29c5fd012ea9823bed48696856
+#act
+uint8 BIG_DATA_POWERONOFF_ACTION_POWERON=0
+uint8 BIG_DATA_POWERONOFF_ACTION_POWEROFF=1
+#BigTrigger
+uint8 BIG_DATA_ONorOFF_TRG_KEY=0
+uint8 BIG_DATA_ONorOFF_TRG_SLEEP=1
+
+uint8 act
+uint8  BigTrigger
+
+===TOPIC: /bigdata/BigDataTaskStruct
+===TYPE: bigdata/BigDataTaskStruct
+===MD5: 5eeb519d7d7199c427ae0029763d16fd
+   TASKTYPE taskType     
+   SUBTASK subType
+   ACTION act
+   string content               
+   string count
+   
+   
+   
+================================================================================
+MSG: bigdata/TASKTYPE
+	#task type
+	uint8 BIG_DATA_CLEAN=0
+	uint8 BIG_DATA_RELOCATION=1
+	uint8 BIG_DATA_RETURN=2
+	uint8 BIG_DATA_VIDEO=3
+	uint8 BIG_DATA_ADD=4
+	
+	uint8 tasktype
+================================================================================
+MSG: bigdata/SUBTASK
+#enum clean
+	uint8 BIG_DATA_CLEAN_TYPE_AUTO=0
+	uint8 BIG_DATA_CLEAN_TYPE_SPOT=1
+	uint8 BIG_DATA_CLEAN_TYPE_SPOTAREA=2
+	uint8 BIG_DATA_CLEAN_TYPE_CUSTOMAREA=3
+	uint8 BIG_DATA_CLEAN_TYPE_BORDER=4
+	uint8 BIG_DATA_CLEAN_TYPE_AICOVER=5
+	
+#enum relocation
+	uint8 BIG_DATA_RELOCATION_TYPE_STATIC=6
+	uint8 BIG_DATA_RELOCATION_TYPE_DYNAMIC=7
+	
+#enum return
+	uint8 BIG_DATA_RETURN_TYPE_NORMAL=8
+	uint8 BIG_DATA_RETURN_TYPE_EXPLORE=9
+	uint8 BIG_DATA_RETURN_TYPE_RAND=10
+	uint8 BIG_DATA_RETURN_TYPE_3DNORMAL=11
+	uint8 BIG_DATA_RETURN_TYPE_3DRAND=12
+	uint8 BIG_DATA_RETURN_TYPE_BACK = 13
+
+#enum video
+	uint8 BIG_DATA_VIDEO_TYPE_GOTO=14
+	uint8 BIG_DATA_VIDEO_TYPE_PATROL=15
+	uint8 BIG_DATA_VIDEO_TYPE_REMOTE=16
+	
+	uint8 BIG_DATA_TASK_TYPE_UNKNOWN = 255
+	
+	uint8 subtask
+================================================================================
+MSG: bigdata/ACTION
+	#task action
+	uint8 BIG_DATA_START=0
+	uint8 BIG_DATA_PAUSE=1
+	uint8 BIG_DATA_RESUME = 2
+	uint8 BIG_DATA_STOP = 3
+	
+	uint8 act
+
+===TOPIC: /bigdata/BigDataTrigger
+===TYPE: bigdata/BigDataTrigger
+===MD5: 8a08c500650b65f299093b4cc8339521
+#enum trigger
+uint8 BIG_DATA_TRIGGER_UNKNOW=0
+uint8 BIG_DATA_TRIGGER_KEY=1
+uint8 BIG_DATA_TRIGGER_SCHEDULE=2
+uint8 BIG_DATA_TRIGGER_WORKCOMPLETE=3
+uint8 BIG_DATA_TRIGGER_LOWBATTERY=4
+uint8 BIG_DATA_TRIGGER_BLOCKTIME=5
+uint8 BIG_DATA_TRIGGER_BREAKPOINT=6
+uint8 BIG_DATA_TRIGGER_INTERRUPT=7
+uint8 BIG_DATA_TRIGGER_ALERT=8
+uint8 BIG_DATA_TRIGGER_APP=9
+uint8 BIG_DATA_TRIGGER_RESETMAP=10
+uint8 BIG_DATA_TRIGGER_REMOTE=11
+uint8 BIG_DATA_TRIGGER_DRAG = 12
+uint8 BIG_DATA_TRIGGER_3DFRONT = 13
+uint8 BIG_DATA_TRIGGER_CANNOTFINDDOCK=14
+
+uint8 trigger
+   
+
+   
+   
+   
+
+===TOPIC: /bigdata/BigDataUpdateStruct
+===TYPE: bigdata/BigDataUpdateStruct
+===MD5: d5bb2f8b0e7f0f084c9cfcf4d03b0b90
+	BIG_DATA_UPDATE_ACTION act
+	string Target_Version
+	UPDATE_ISForce UpdateISForce
+	UPDATE_TYPE UpdateType
+	RESULT      UpdateResult
+	string Updated_Version			
+	UPDATE_STOPREASON UpdateStopReason
+================================================================================
+MSG: bigdata/BIG_DATA_UPDATE_ACTION
+	#cmd source 
+	uint8 BIG_DATA_STARTDOWNLOAD=0			 
+	uint8 BIG_DATA_ENDDOWNLOAD=1			 
+	uint8 BIG_DATA_STARTUPGRADE=2			
+	uint8 BIG_DATA_ENDUPGRAD=3	
+	
+	uint8 action
+================================================================================
+MSG: bigdata/UPDATE_ISForce
+		uint8 BIG_DATA_UPDATE_NORMAL=0
+		uint8 BIG_DATA_UPDATE_FORCE=1
+		
+		uint8 ISForce
+================================================================================
+MSG: bigdata/UPDATE_TYPE
+	uint8 BIG_DATA_UPDATE_TYPE_SILENT = 1
+	uint8 BIG_DATA_UPDATE_TYPE_MAUNAL = 2
+	uint8 type
+================================================================================
+MSG: bigdata/RESULT
+	uint8 BIG_DATA_SUCCESS=1
+	uint8 BIG_DATA_FAIL=0
+	
+	uint8 result
+================================================================================
+MSG: bigdata/UPDATE_STOPREASON
+	uint8 BIG_DATA_UPDATE_LOWPOWER = 10	
+	uint8 BIG_DATA_UPDATE_NOTINCHARGE=11   
+	uint8 BIG_DATA_UPDATE_DOWNLOADFAIL = 20
+	uint8 BIG_DATA_UPDATE_FIRMERROR =30	
+	uint8 BIG_DATA_UPDATE_ERROR=31		    
+	uint8 BIG_DATA_UPDATE_CHECK_ERROR=32 	
+	uint8 BIG_DATA_UPDATE_SAME_VER=33		
+	uint8 BIG_DATA_UPDATE_MD5_ERR=34 		
+	uint8 BIG_DATA_UPDATE_PRODUCT_ERR=35 	
+	uint8 BIG_DATA_UPDATE_UNKNOW = 41	
+	
+	uint8 stopreason
+
+===TOPIC: /bigdata/CastDataToInternet
+===TYPE: bigdata/CastDataToInternet
+===MD5: e5cc8ac1601ff4b41e5864535ba1c200
+	string rn #event name 
+	string data #event data,json Unformatted 
+
+===TOPIC: /bigdata/InternetAvaliable
+===TYPE: bigdata/InternetAvaliable
+===MD5: 3cce3f5665c7611a56062d97bd92a405
+	uint8 STATUS_INTERNET_OFFLINE=0
+	uint8 STATUS_INTERNET_ONLINE=1
+	
+	uint8 status 
+
+===TOPIC: /bigdata/MdsBigDataNetConnetStatus
+===TYPE: bigdata/MdsBigDataNetConnetStatus
+===MD5: d01796bebd9f3d04eda4a76b9fd9de48
+MdsBigDataNetConnetStatusNode[] status
+================================================================================
+MSG: bigdata/MdsBigDataNetConnetStatusNode
+	uint8 MDSBD_NETSTATUS_TYPE_ROUTE=0
+    uint8 MDSBD_NETSTATUS_TYPE_SVR=1
+	
+	uint8 MDSBD_NET_CNT_STATUS_DIS=0
+    uint8 MDSBD_NET_CNT_STATUS_CON=1
+	
+	uint8 type
+    uint32 status
+    uint64 timestamp
+ 
+
+===TOPIC: /bigdata/MdsBigDataSystemStatus
+===TYPE: bigdata/MdsBigDataSystemStatus
+===MD5: c34f087715335a28eea406bed1491f48
+MdsBigDataSystemStatusNode[] status
+================================================================================
+MSG: bigdata/MdsBigDataSystemStatusNode
+	int32 signal
+    string uptime
+    int32 Mused
+    int32 Mfree
+    int32 posx
+    int32 posy
+    int32 isvalid
+    int32 mapid
+    uint64 timestamp
+
+===TOPIC: /bigdata/SenserReport
+===TYPE: bigdata/SenserReport
+===MD5: ca1509eebd0087cb24dc4c2698750bae
+	uint8 DTOF_START_TIME = 1
+	uint8 DOTF_START_COUNT = 2
+	uint8 GYRO_START_TIME = 3
+	uint8 AUTO_COLLECT_STATE = 4
+	uint8 WATERBOX_ERROR_STOP = 5
+	uint8 DTOF_ROCK_TRIGGER = 6
+	uint8 type
+	uint32 value
+
+===TOPIC: /comm/CommControl
+===TYPE: comm/CommControl
+===MD5: c4ba61e7eb662b5aa50dfb6d7d4df1f5
+uint8 COMM_CTL_CONTROL = 0
+uint8 COMM_CTL_REPORT = 1
+uint8 type
+uint8 state
+
+===TOPIC: /comm/RecvData
+===TYPE: comm/RecvData
+===MD5: 5a7f134de1b7437eae7d27ef3b79b5b2
+byte[] data
+
+===TOPIC: /comm/SendData
+===TYPE: comm/SendData
+===MD5: 5a7f134de1b7437eae7d27ef3b79b5b2
+byte[] data
+
+===TOPIC: /imu/ImuSensor
+===TYPE: imu/ImuSensor
+===MD5: 4c90e05745be1ab9370dcc4b7fb0cb58
+Header header
+float32[] gyros
+float32[] accs
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+# 0: no frame
+# 1: global frame
+string frame_id
+
+===TOPIC: /imu/ImuState
+===TYPE: imu/ImuState
+===MD5: 4a2113cd620c04f2e3ec79548f60df81
+uint8 gyroState
+uint8 accState
+
+===TOPIC: /imu/InitIMU
+===TYPE: imu/InitIMU
+===MD5: 4ef544f99926d3d8cb7c8012d0a4fd00
+# type enum
+uint8 INIT_TYPE_GYRO = 0
+uint8 INIT_TYPE_ROLL_PITCH_YAW = 1
+uint8 INIT_TYPE_GYRO_AND_ACC = 2
+uint8 type    #INIT_TYPE
+
+===TOPIC: /key/Key
+===TYPE: key/Key
+===MD5: 7e80d04254d16c280e39e414b4406336
+#type enum
+uint8 KEY_TYPE_AUTO = 0
+uint8 KEY_TYPE_RESET = 1
+uint8 type    #KEY_TYPE
+
+#type enum
+uint8 KEY_EVENT_CLICK = 0
+uint8 KEY_EVENT_DOUBLE_CLICK = 1
+uint8 KEY_EVENT_LONG_PRESSED = 2
+uint8 KEY_EVENT_LONG_LONG_PRESSED = 3
+uint8 KEY_EVENT_PRESSED_DOWN = 4
+uint8 KEY_EVENT_PRESSED_UP = 5
+uint8 event   # KEY_EVENT
+
+===TOPIC: /lds/ControlLds
+===TYPE: lds/ControlLds
+===MD5: f6e2733be5bf870ca8285f3b16c4fde5
+# type enum
+uint8 LDS_CONTROL_START = 0
+uint8 LDS_CONTROL_STOP = 1
+uint8 LDS_CONTROL_RESET_POSE  = 2
+uint8 type    # TYPE
+
+===TOPIC: /lds/Lds
+===TYPE: lds/Lds
+===MD5: ba4104feb5e50b9c15d3e29666224d02
+Header header
+LdsPoint[] points
+prediction/PredictPose ldsPose
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+# 0: no frame
+# 1: global frame
+string frame_id
+
+================================================================================
+MSG: lds/LdsPoint
+float32 x
+float32 y
+float32 rho
+float32 theta
+float32 power
+================================================================================
+MSG: prediction/PredictPose
+Pose predictPose
+Pose pose
+================================================================================
+MSG: prediction/Pose
+Header header
+float32 x
+float32 y
+float32 theta
+
+===TOPIC: /lifespan/Lifespan
+===TYPE: lifespan/lifespan
+===MD5: bb48bd3073d8ca0024bf8e1cd9c18779
+#type enum
+uint8 LIFESPANCHANGE = 0
+uint8 LIFESPANTIMEOUT = 1
+uint8 type    #LIFE_TYPE
+
+#type enum
+uint8 LIFE_MAIN_BRUSH = 0
+uint8 LIFE_SIDE_BRUSH = 1
+uint8 LIFE_HEPA = 2
+uint8 DUST_HEPA_TIMEOUT = 3
+uint8 DUSTER_TIMEOUT = 4
+uint8 event   # LIFE_EVENT
+
+
+===TOPIC: /light/LightControls
+===TYPE: light/LightControls
+===MD5: c982f6631dfc27945f1bba1a29551878
+LightControl[] controls
+================================================================================
+MSG: light/LightControl
+uint8 LIGHT_TYPE_AUTO_BLUE = 0
+uint8 LIGHT_TYPE_AUTO_RED = 1
+uint8 LIGHT_TYPE_WIFI = 2
+
+uint8 type
+
+uint8 LIGHT_MODE_STABLE = 0 
+uint8 LIGHT_MODE_FLASH = 1
+uint8 LIGHT_MODE_BREATH = 2
+uint8 LIGHT_MODE_CUSTOM = 3
+uint8 LIGHT_MODE_FADE_UP = 4
+uint8 LIGHT_MODE_FADE = 5
+uint8 mode
+
+uint8 value
+
+
+
+===TOPIC: /map/AiAreas
+===TYPE: map/AiAreas
+===MD5: ac1142fc755851b0231126d7ca225eb4
+uint32 mapid
+uint32 areasId
+AiArea[] areas
+================================================================================
+MSG: map/AiArea
+uint32 areaid
+uint8 areaType
+
+===TOPIC: /map/CarpetMap
+===TYPE: slam/SlamMap
+===MD5: 6f316e7cbf64fca0a845cd138238aaa6
+SlamMapMeta meta
+int8[] data
+
+================================================================================
+MSG: slam/SlamMapMeta
+uint16 sizex
+uint16 sizey
+float32 xmin
+float32 xmax
+float32 ymin
+float32 ymax
+float32 resolution
+
+
+===TOPIC: /map/ChargerDockInfo
+===TYPE: map/ChargerDockInfo
+===MD5: 1822602d70e60c7c106329c9490914be
+uint8 CHARGER_DOCK_UPDATE = 0
+uint8 CHARGER_DOCK_REPORT = 1
+uint8 CHARGER_DOCK_RESET = 2
+uint8 CHARGER_DOCK_GET = 3 
+uint8 CHARGER_DOCK_UPDATE_FRONT = 4
+uint8 CHARGER_DOCK_UPDATE_FRONT_3D = 5
+uint8 CHARGER_DOCK_UPDATE_3D = 6
+
+uint8 docktype
+uint8 info
+uint32 mapid
+uint8 hasGotDock
+uint8 hasfindDock
+uint8 hasFront3DDock
+uint8 hasGot3DDock
+ChargerDock Dockfront
+ChargerDock dock
+ChargerDock finddock
+ChargerDock T3DDockfront
+ChargerDock T3Ddock
+
+
+================================================================================
+MSG: map/ChargerDock
+float32 x
+float32 y
+float32 theta
+
+===TOPIC: /map/CleanAreas
+===TYPE: map/CleanAreas
+===MD5: 37ab85e55444893cfe620880657bf1d6
+uint8[] areaids
+
+===TOPIC: /map/CompressAllMap
+===TYPE: map/CompressAllMap
+===MD5: e51079b35ab1a78d91fc95267c5e9599
+uint32 cmd #1 start compress all map
+
+===TOPIC: /map/CompressAllMapResponse
+===TYPE: map/CompressAllMapResponse
+===MD5: 169b3e1de6d13107f02fa052dba96fc6
+uint32 end #1  compress all map end
+
+===TOPIC: /map/CompressMap
+===TYPE: map/CompressMap
+===MD5: ec53ad562edef830b16ac75880659827
+uint32 mapid
+MapMetaInfo info
+CompressSubMap[] submaps
+================================================================================
+MSG: map/MapMetaInfo
+uint16 mapWidth		# width of grid map
+uint16 mapHeight	# height of grid map
+uint16 columns		# submap column count
+uint16 rows			# submap row count
+uint16 submapWidth	# submap width
+uint16 submapHeight	# submap height
+uint16 resolution	# resolution of grid. cm
+
+================================================================================
+MSG: map/CompressSubMap
+uint16 submapid
+uint32 crc32
+uint32 length
+int8[] data
+
+===TOPIC: /map/GenAreaResult
+===TYPE: map/GenAreaResult
+===MD5: 25458147911545c320c4c0a299eff763
+uint8 result #1need rearea #0unneed
+
+===TOPIC: /map/ManipulateMap
+===TYPE: map/ManipulateMap
+===MD5: f476cffc5749d62901353fa10efa5a7d
+uint32 manipulateId
+# ManipulateMapType
+uint8 manipulateType
+# saveMapType
+uint8 mapType
+# ManipulateMapType , all , slammap etc.
+uint8 subMapType
+# rename mapname by user 
+string name
+
+===TOPIC: /map/ManipulateMapResponse
+===TYPE: map/ManipulateMapResponse
+===MD5: af3cc9fdb7d821c059f761d5e1586a94
+uint32 manipulateId
+# ManipulateMapType
+uint8 manipulateType
+# saveMapType
+uint8 mapType
+# ManipulateMapType , all , slammap etc.
+uint8 subMapType
+
+# 0 ok 1 failed.
+uint8 response
+slam/SlamMap map
+slam/SlamCloseRangeMap closemap
+================================================================================
+MSG: slam/SlamMap
+SlamMapMeta meta
+int8[] data
+
+================================================================================
+MSG: slam/SlamMapMeta
+uint16 sizex
+uint16 sizey
+float32 xmin
+float32 xmax
+float32 ymin
+float32 ymax
+float32 resolution
+
+
+================================================================================
+MSG: slam/SlamCloseRangeMap
+SlamMapMeta meta
+int8[] data
+
+===TOPIC: /map/ManipulateSubMap
+===TYPE: map/ManipulateSubMap
+===MD5: 932522a9dfa1e44044085ca02481a1e7
+uint32 manipulateId
+# ManipulateMapType
+uint8 manipulateType
+# ManipulateMapType , all , slammap etc.
+uint8 subMapType
+string path
+
+===TOPIC: /map/MapAreasSize
+===TYPE: map/MapAreasSize
+===MD5: 5dfe14a62ae9890aca5dd573a0d4da93
+MapAreaSize[] area
+
+================================================================================
+MSG: map/MapAreaSize
+uint32 areaId
+int32 area
+
+===TOPIC: /map/MapControl
+===TYPE: map/MapControl
+===MD5: 9e5aa267686914cc456fc303a28fa7d0
+uint8 MAP_CONTROL_TYPE_RESET = 0
+uint8 MAP_CONTROL_TYPE_REGENERATE = 1
+uint8 MAP_CONTROL_TYPE_SAVE = 2
+uint8 MAP_CONTROL_TYPE_LOAD = 3
+uint8 MAP_CONTROL_TYPE_UPDATE_MAP = 4
+uint8 MAP_CONTROL_TYPE_SPOT_AREA_GENERATE = 5
+uint8 MAP_CONTROL_TYPE_SPOT_AREA_UPDATE = 6
+uint8 MAP_CONTROL_TYPE_WIFI_MAP_GENERATE = 7
+uint8 MAP_CONTROL_TYPE_WIFI_MAP_RESET = 8
+uint8 MAP_CONTROL_TYPE_WIFI_MAP_LOAD = 9
+
+
+uint8 type
+uint8 value
+string mapPath
+
+===TOPIC: /map/MapInfos
+===TYPE: map/MapInfos
+===MD5: 1bf1d9ff34e60f5295abc25772d22a88
+MapInfo[] infos
+================================================================================
+MSG: map/MapInfo
+# map id of save map.
+uint32 mapid
+uint32 backup_mapid
+# SaveMapType msg
+uint8 savemapType
+# is map active for using.
+uint8 isActive
+# is map recent used.
+uint8 isRecentMap
+# map name.
+string mapName
+
+===TOPIC: /map/ReplaceMapType
+===TYPE: map/ReplaceMapType
+===MD5: 678a0bc48d379941fd9bac2806059781
+uint8 SAVE_MAP_TYPE_INCOMPLETE = 0
+uint8 SAVE_MAP_TYPE_AUTOSAVE = 1
+uint8 SAVE_MAP_TYPE_MANUAL_SAVE_1 = 2
+uint8 SAVE_MAP_TYPE_MANUAL_SAVE_2 = 3
+uint8 SAVE_MAP_TYPE_ERROR = 255
+uint8 maptype
+uint32 mapid
+
+===TOPIC: /map/ReportTraceIndex
+===TYPE: map/ReportTraceIndex
+===MD5: 5c301a5184a1a3d5b65245e564db9c31
+uint32 traceId
+uint32 startIdx
+uint32 endIdx
+int8[] data 
+
+===TOPIC: /map/ReportWatchPoints
+===TYPE: map/ReportWatchPoints
+===MD5: f61a3fce4a70bd36dac71bcf48308717
+uint32 mapid
+uint32 areasId
+WatchPoint[] points
+================================================================================
+MSG: map/WatchPoint
+uint32 areaid
+
+Dot point
+
+================================================================================
+MSG: map/Dot
+float32 x
+float32 y
+
+===TOPIC: /map/SpotAreas
+===TYPE: map/SpotAreas
+===MD5: ac25b535a0ecf7445ab05d42172bedbf
+uint32 mapid
+uint32 areasId
+uint8 type # 0 normal , 1 expand 
+SpotArea[] areas
+================================================================================
+MSG: map/SpotArea
+uint32 areaid
+string name
+
+uint8 SPOT_AREA_TYPE_UNDEFINED = 0
+
+uint8 type
+Dot[] polygon
+uint32[] connections
+AreaCleanSet setting
+uint8 cleanindex #0,unkown
+================================================================================
+MSG: map/Dot
+float32 x
+float32 y
+
+================================================================================
+MSG: map/AreaCleanSet
+uint32 fanlevel #xi li 0.silent 1.normal 2.high 3.veryhigh 
+uint32 waterlevel #water 0.low 1.normal 2.high 3.veryhigh
+uint32 cleancount # 1,2
+
+===TOPIC: /map/SpotAreasChanged
+===TYPE: map/SpotAreasChanged
+===MD5: ac25b535a0ecf7445ab05d42172bedbf
+uint32 mapid
+uint32 areasId
+uint8 type # 0 merge , 1 split 
+SpotArea[] areas
+================================================================================
+MSG: map/SpotArea
+uint32 areaid
+string name
+
+uint8 SPOT_AREA_TYPE_UNDEFINED = 0
+
+uint8 type
+Dot[] polygon
+uint32[] connections
+AreaCleanSet setting
+uint8 cleanindex #0,unkown
+================================================================================
+MSG: map/Dot
+float32 x
+float32 y
+
+================================================================================
+MSG: map/AreaCleanSet
+uint32 fanlevel #xi li 0.silent 1.normal 2.high 3.veryhigh 
+uint32 waterlevel #water 0.low 1.normal 2.high 3.veryhigh
+uint32 cleancount # 1,2
+
+===TOPIC: /map/SpotAreasSetting
+===TYPE: map/SpotAreasSetting
+===MD5: ac25b535a0ecf7445ab05d42172bedbf
+uint32 mapid
+uint32 areasId
+uint8 type # 0 normal , 1 expand 
+SpotArea[] areas
+================================================================================
+MSG: map/SpotArea
+uint32 areaid
+string name
+
+uint8 SPOT_AREA_TYPE_UNDEFINED = 0
+
+uint8 type
+Dot[] polygon
+uint32[] connections
+AreaCleanSet setting
+uint8 cleanindex #0,unkown
+================================================================================
+MSG: map/Dot
+float32 x
+float32 y
+
+================================================================================
+MSG: map/AreaCleanSet
+uint32 fanlevel #xi li 0.silent 1.normal 2.high 3.veryhigh 
+uint32 waterlevel #water 0.low 1.normal 2.high 3.veryhigh
+uint32 cleancount # 1,2
+
+===TOPIC: /map/TraceUpdate
+===TYPE: map/TraceUpdate
+===MD5: c159d0c05ced105a713d8eb92767a1cf
+uint32 idx			# idx 0 and points is null means reset.
+TracePoint[] points
+
+================================================================================
+MSG: map/TracePoint
+Dot dot
+uint8 value
+
+================================================================================
+MSG: map/Dot
+float32 x
+float32 y
+
+===TOPIC: /map/UsingCustomCompressMap
+===TYPE: map/UsingCustomCompressMap
+===MD5: e51079b35ab1a78d91fc95267c5e9599
+uint32 cmd # 0 : normal 1:custom
+
+===TOPIC: /map/VirtualWalls
+===TYPE: map/VirtualWalls
+===MD5: 6b4a2ee78ff17a6438a22d42fdad88bd
+uint32 mapid
+
+VirtualWall[] vwalls
+================================================================================
+MSG: map/VirtualWall
+uint32 vwid
+
+uint8 VIRTUAL_WALL_TYPE_NORMAL = 0
+uint8 VIRTUAL_WALL_TYPE_CARPET = 1
+uint8 VIRTUAL_WALL_TYPE_RECOMMEND = 2
+
+uint8 type
+
+# vwall dots.
+Dot[] dots
+
+================================================================================
+MSG: map/Dot
+float32 x
+float32 y
+
+===TOPIC: /map/WatchPoints
+===TYPE: map/WatchPoints
+===MD5: f61a3fce4a70bd36dac71bcf48308717
+uint32 mapid
+uint32 areasId
+WatchPoint[] points
+================================================================================
+MSG: map/WatchPoint
+uint32 areaid
+
+Dot point
+
+================================================================================
+MSG: map/Dot
+float32 x
+float32 y
+
+===TOPIC: /motor/ControlMotor
+===TYPE: motor/ControlMotor
+===MD5: 8996f48ca99435163ff361bc18c06ab7
+ControlMotorValue[] controls
+================================================================================
+MSG: motor/ControlMotorValue
+MotorType type
+MotorControlType controlType
+uint16 value
+================================================================================
+MSG: motor/MotorType
+# type enum
+uint8 MOTOR_TYPE_MAINBRUSH = 0
+uint8 MOTOR_TYPE_LEFT_SIDEBRUSH = 1
+uint8 MOTOR_TYPE_RIGHT_SIDEBRUSH = 2
+uint8 MOTOR_TYPE_FAN = 3
+uint8 MOTOR_TYPE_WATERPUMP = 4
+uint8 TYPE_LEFTWHEEL = 5
+uint8 TYPE_RIGHTWHEEL = 6
+uint8 type    # TYPE
+================================================================================
+MSG: motor/MotorControlType
+# type enum
+uint8 MOTOR_CONTROL_TYPE_VOLTAGE = 0
+uint8 MOTOR_CONTROL_TYPE_SPEED = 1
+uint8 MOTOR_CONTROL_TYPE_CUSTOM = 2
+uint8 MOTOR_CONTROL_TYPE_PUMP = 3
+uint8 MOTOR_CONTROL_TYPE_PUMP_START = 4
+uint8 type    # TYPE
+
+===TOPIC: /motor/MotorCleanSilent
+===TYPE: motor/MotorCleanSilent
+===MD5: ab5fc08ac104c2c393241f98d35bd856
+#type enum
+uint8 MOTOR_SET_CTRL = 0
+uint8 type    
+
+#type enum
+uint8 CLEAN_SILENT_MODE = 0
+uint8 CLEAN_WATER_MODE = 1
+
+
+uint8 event   
+
+===TOPIC: /motor/MotorCurrent
+===TYPE: motor/MotorCurrent
+===MD5: 9315d98a2bebeaf27f1848006d18100f
+MotorCurrentValue[] currents
+================================================================================
+MSG: motor/MotorCurrentValue
+MotorType type
+uint16 current
+================================================================================
+MSG: motor/MotorType
+# type enum
+uint8 MOTOR_TYPE_MAINBRUSH = 0
+uint8 MOTOR_TYPE_LEFT_SIDEBRUSH = 1
+uint8 MOTOR_TYPE_RIGHT_SIDEBRUSH = 2
+uint8 MOTOR_TYPE_FAN = 3
+uint8 MOTOR_TYPE_WATERPUMP = 4
+uint8 TYPE_LEFTWHEEL = 5
+uint8 TYPE_RIGHTWHEEL = 6
+uint8 type    # TYPE
+
+===TOPIC: /motor/MotorOnOffControl
+===TYPE: motor/MotorOnOffControl
+===MD5: 70121ff7becc23683b82101ff1ba5dde
+# onOff motor type
+uint8 motorType
+# onOff control type
+uint8 controlType
+
+===TOPIC: /motor/MotorProtection
+===TYPE: motor/MotorType
+===MD5: 47c11bbfead375d951d4e015ac3f9f10
+# type enum
+uint8 MOTOR_TYPE_MAINBRUSH = 0
+uint8 MOTOR_TYPE_LEFT_SIDEBRUSH = 1
+uint8 MOTOR_TYPE_RIGHT_SIDEBRUSH = 2
+uint8 MOTOR_TYPE_FAN = 3
+uint8 MOTOR_TYPE_WATERPUMP = 4
+uint8 TYPE_LEFTWHEEL = 5
+uint8 TYPE_RIGHTWHEEL = 6
+uint8 type    # TYPE
+
+===TOPIC: /onOffInfo/DownInCovered
+===TYPE: onOffInfo/DownInCovered
+===MD5: e4da51e86d3bac963ee2bb1f41031407
+# covered is 1 , not covered is 0
+uint8 value
+
+===TOPIC: /onOffInfo/LackofWaterValue
+===TYPE: onOffInfo/LackofWaterValue
+===MD5: 46d2ea20901b2bd13adcdda72c12904c
+# type enum
+uint8 TYPE_WATERBOX_IN = 0
+uint8 type    # TYPE
+
+uint8 VALUE_HAS_WATER = 0
+uint8 VALUE_LACK_OF_WATER = 1
+uint8 value
+
+===TOPIC: /onOffInfo/OnOffInfo
+===TYPE: onOffInfo/OnOffInfo
+===MD5: 27262bf10979dcfa4bad60d6c2b24ca7
+OnOffSensorValue[] values
+================================================================================
+MSG: onOffInfo/OnOffSensorValue
+# type enum
+uint8 TYPE_BUMP = 0
+uint8 TYPE_DOWNIN = 1
+uint8 TYPE_FALL = 2
+uint8 TYPE_DIRTBOX = 3
+uint8 TYPE_CARPET = 4
+uint8 TYPE_MOP = 5
+uint8 type    # TYPE
+uint8 value
+
+===TOPIC: /onOffInfo/TestOnOffSensor
+===TYPE: onOffInfo/TestOnOffSensor
+===MD5: 3958533281df6e9cc0a725a386f3b5df
+uint8 type
+
+===TOPIC: /onOffInfo/WaterBoxStateReport
+===TYPE: onOffInfo/WaterBoxStateReport
+===MD5: dd2e7aa1729dba01f14b15c55cf40615
+# type enum
+uint8 TYPE_WATERBOX_TEST = 0
+uint8 type    # TYPE
+
+uint8 VALUE_WATERBOX_START = 0	
+uint8 VALUE_WATERBOX_STOP = 1
+
+uint8 value
+
+===TOPIC: /ota/OtaState
+===TYPE: ota/OtaState
+===MD5: e9a4843dc67018b6546984890d9615dc
+uint8 type
+# ota state , 0 is off , 1 is on.
+uint8 state
+
+===TOPIC: /power/Battery
+===TYPE: power/Battery
+===MD5: 1f868bac590fa9e653b61dc342b25421
+uint8 battery	# 0-100
+uint8 isLowVoltageToPowerOff #low power signal.
+
+===TOPIC: /power/ChargeSignals
+===TYPE: power/ChargeSignals
+===MD5: 846220507f9e9d9d356cfdfc3a8366bd
+uint8 ROBOT_FRONT_LEFT = 0
+uint8 ROBOT_FRONT_RIGHT = 1
+uint8 ROBOT_LEFT = 2
+uint8 ROBOT_RIGHT = 3
+uint8 ROBOT_BACK_LEFT = 4
+uint8 ROBOT_BACK_RIGHT = 5
+uint8 ROBOT_NONE = 6
+
+uint8 CHARGE_DOCK_SIGNAL_NONE = 0
+uint8 CHARGE_DOCK_SIGNAL_LEFT = 1
+uint8 CHARGE_DOCK_SIGNAL_RIGHT = 2
+uint8 CHARGE_DOCK_SIGNAL_CENTER = 3
+
+uint8 CHARGE_DOCK_SIGNAL_VIRTUAL_NONE = 0
+uint8 CHARGE_DOCK_SIGNAL_RIGHT_VIRTUAL = 1
+uint8 CHARGE_DOCK_SIGNAL_LEFT_VIRTUAL = 2
+uint8 CHARGE_DOCK_SIGNAL_OMNI_VIRTUAL = 3
+uint8 CHARGE_DOCK_SIGNAL_CH_OMNI_VIRTUAL = 4
+
+ChargeSignal[] signals
+
+
+================================================================================
+MSG: power/ChargeSignal
+uint8 direction
+uint8 dockSignal
+uint8 virtualwall
+
+
+===TOPIC: /power/ChargeState
+===TYPE: power/ChargeState
+===MD5: 3f40efefe99d0b54d25afc2ed5523fc0
+# 0 not on charger , 1 on charger , 3 on 3d charger
+uint8 isOnCharger
+#enum
+uint8 CHARGE_STATE_NOT_CHARGING = 0
+uint8 CHARGE_STATE_NORMAL_CHARGING = 1
+uint8 CHARGE_STATE_CHARGE_FULL = 2
+uint8 CHARGE_STATE_CHARGE_ERROR = 3
+uint8 CHARGE_STATE_CHARGE_ERROR_SWITCH_OFF = 4
+uint8 chargeState
+
+===TOPIC: /power/ChargeStateCause
+===TYPE: power/ChargeStateCause
+===MD5: 95e24bc0c13bd09a6606edfdc9a0bc59
+#enum ChargerCause type
+uint8 CHARGE_STATE_CHANGE_CAUSE_UNKNOW=0 
+uint8 CHARGE_STATE_CHANGE_CAUSE_POWER_OFF=1 
+uint8 CHARGE_STATE_CHANGE_CAUSE_BUMP = 2 
+uint8 CHARGE_STATE_CHANGE_CAUSE_DRAG =3 	
+uint8 CHARGE_STATE_CHANGE_CAUSE_LIFT=4 
+
+uint8 ChargerCause
+
+===TOPIC: /power/PowerMode
+===TYPE: power/PowerMode
+===MD5: 17b0649398869a42f13f8d9d0000f4c0
+#enum
+uint8 POWER_MODE_ERP = 0
+uint8 POWER_MODE_CEC = 1
+uint8 POWER_MODE_POWER_OFF = 2
+uint8 POWER_MODE_REBOOT = 3
+uint8 powerMode
+uint8 operate   # 0 quit , 1 enter.
+
+===TOPIC: /power/T3DChargerReport
+===TYPE: power/T3DChargerReport
+===MD5: 340cebc61bac5baa83da68e9d3893fa4
+uint8 reportInfo
+
+===TOPIC: /prediction/PredictPose
+===TYPE: prediction/PredictPose
+===MD5: 7b470216c350f9e55e9123b5b063d5d3
+Pose predictPose
+Pose pose
+================================================================================
+MSG: prediction/Pose
+Header header
+float32 x
+float32 y
+float32 theta
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+# 0: no frame
+# 1: global frame
+string frame_id
+
+===TOPIC: /prediction/PredictionOperation
+===TYPE: prediction/PredictionOperation
+===MD5: bcc593d2099df85a3c88a02644759db9
+# enum
+uint8 OPERATEION_TYPE_RESET = 0
+uint8 operation
+Pose pose
+================================================================================
+MSG: prediction/Pose
+Header header
+float32 x
+float32 y
+float32 theta
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+
+===TOPIC: /prediction/UpdatePose
+===TYPE: prediction/UpdatePose
+===MD5: fecf0dd688f5c70c9311410640ce79cd
+Pose predictPose
+Pose pose
+uint8 isToInterpolate
+================================================================================
+MSG: prediction/Pose
+Header header
+float32 x
+float32 y
+float32 theta
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+# 0: no frame
+# 1: global frame
+string frame_id
+
+===TOPIC: /protocol/RecvSAData
+===TYPE: protocol/RecvSAData
+===MD5: a9c65577af24aae7e55ec2003ec0a690
+byte mainCmd
+byte subCmd
+uint16 size
+byte[] data
+
+uint32 id
+
+#type enum
+uint8 MSG_TYPE_REQUEST = 0
+uint8 MSG_TYPE_RESPONSE = 1
+uint8 MSG_TYPE_REPORT = 2
+uint8 type    #MSG_TYPE
+
+===TOPIC: /protocol/SendSAData
+===TYPE: protocol/SendSAData
+===MD5: e1fec84077b768d5901783b5bfe7d778
+byte mainCmd
+byte subCmd
+uint16 size
+byte[] data
+
+#type enum
+uint8 MSG_TYPE_REQUEST = 0
+uint8 MSG_TYPE_RESPONSE = 1
+uint8 MSG_TYPE_REPORT = 2
+uint8 type    #MSG_TYPE
+
+===TOPIC: /rangeDet/RangeDetect
+===TYPE: rangeDet/RangeDetect
+===MD5: 3a0f12b048c3dd7a48ed7eb1cd8e72c7
+Header header
+RangeDetValue[] rangeDets
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+# 0: no frame
+# 1: global frame
+string frame_id
+
+================================================================================
+MSG: rangeDet/RangeDetValue
+RangeDetType type
+uint16[] values
+================================================================================
+MSG: rangeDet/RangeDetType
+# type enum
+uint8 RANGE_TYPE_FRONT_BUFFER = 0
+uint8 RANGE_TYPE_SIDE_IN = 1
+uint8 RANGE_TYPE_DOWN_IN = 2
+uint8 RANGE_TYPE_ULTRASOUND = 3
+uint8 type    # RANGE_TYPE
+
+===TOPIC: /robot/Robot
+===TYPE: robot/Robot
+===MD5: 5cfb7b142ed6323fe50812ffb59c30d4
+Header header
+prediction/PredictPose pose
+power/Battery battery
+power/ChargeState chargestate
+motor/MotorCurrent currents
+rangeDet/RangeDetect rangeDetects
+onOffInfo/OnOffInfo onOffInfo
+onOffInfo/BumpValue[] bump
+onOffInfo/DownInValue[] downin
+onOffInfo/FallValue[] fall
+onOffInfo/DirtBoxValue[] dirtbox
+onOffInfo/CarpetValue[] carpet
+onOffInfo/WaterBoxValue[] waterbox
+lds/Lds ldsPic
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+# 0: no frame
+# 1: global frame
+string frame_id
+
+================================================================================
+MSG: prediction/PredictPose
+Pose predictPose
+Pose pose
+================================================================================
+MSG: prediction/Pose
+Header header
+float32 x
+float32 y
+float32 theta
+================================================================================
+MSG: power/Battery
+uint8 battery	# 0-100
+uint8 isLowVoltageToPowerOff #low power signal.
+================================================================================
+MSG: power/ChargeState
+# 0 not on charger , 1 on charger , 3 on 3d charger
+uint8 isOnCharger
+#enum
+uint8 CHARGE_STATE_NOT_CHARGING = 0
+uint8 CHARGE_STATE_NORMAL_CHARGING = 1
+uint8 CHARGE_STATE_CHARGE_FULL = 2
+uint8 CHARGE_STATE_CHARGE_ERROR = 3
+uint8 CHARGE_STATE_CHARGE_ERROR_SWITCH_OFF = 4
+uint8 chargeState
+================================================================================
+MSG: motor/MotorCurrent
+MotorCurrentValue[] currents
+================================================================================
+MSG: motor/MotorCurrentValue
+MotorType type
+uint16 current
+================================================================================
+MSG: motor/MotorType
+# type enum
+uint8 MOTOR_TYPE_MAINBRUSH = 0
+uint8 MOTOR_TYPE_LEFT_SIDEBRUSH = 1
+uint8 MOTOR_TYPE_RIGHT_SIDEBRUSH = 2
+uint8 MOTOR_TYPE_FAN = 3
+uint8 MOTOR_TYPE_WATERPUMP = 4
+uint8 TYPE_LEFTWHEEL = 5
+uint8 TYPE_RIGHTWHEEL = 6
+uint8 type    # TYPE
+================================================================================
+MSG: rangeDet/RangeDetect
+Header header
+RangeDetValue[] rangeDets
+================================================================================
+MSG: rangeDet/RangeDetValue
+RangeDetType type
+uint16[] values
+================================================================================
+MSG: rangeDet/RangeDetType
+# type enum
+uint8 RANGE_TYPE_FRONT_BUFFER = 0
+uint8 RANGE_TYPE_SIDE_IN = 1
+uint8 RANGE_TYPE_DOWN_IN = 2
+uint8 RANGE_TYPE_ULTRASOUND = 3
+uint8 type    # RANGE_TYPE
+================================================================================
+MSG: onOffInfo/OnOffInfo
+OnOffSensorValue[] values
+================================================================================
+MSG: onOffInfo/OnOffSensorValue
+# type enum
+uint8 TYPE_BUMP = 0
+uint8 TYPE_DOWNIN = 1
+uint8 TYPE_FALL = 2
+uint8 TYPE_DIRTBOX = 3
+uint8 TYPE_CARPET = 4
+uint8 TYPE_MOP = 5
+uint8 type    # TYPE
+uint8 value
+================================================================================
+MSG: onOffInfo/BumpValue
+# type enum
+uint8 TYPE_BUMP_LEFT = 0
+uint8 TYPE_BUMP_RIGHT = 1
+uint8 TYPE_BUMP_LDS = 2
+
+uint8 type    # TYPE
+
+uint8 VALUE_TRIGGER = 1
+uint8 value
+================================================================================
+MSG: onOffInfo/DownInValue
+# type enum
+uint8 TYPE_DOWNIN_LEFT = 0
+uint8 TYPE_DOWNIN_FRONT = 1
+uint8 TYPE_DOWNIN_FRONT_RIGHT = 2
+uint8 TYPE_DOWNIN_RIGHT = 3
+uint8 TYPE_DOWNIN_LEFT_BACK = 4
+uint8 TYPE_DOWNIN_RIGHT_BACK = 5
+uint8 type    # TYPE
+
+uint8 VALUE_TRIGGER = 1
+uint8 value
+================================================================================
+MSG: onOffInfo/FallValue
+# type enum
+uint8 TYPE_FALL_LEFT = 0
+uint8 TYPE_FALL_RIGHT = 1
+uint8 type    # TYPE
+
+uint8 VALUE_TRIGGER = 1
+uint8 value
+================================================================================
+MSG: onOffInfo/DirtBoxValue
+# type enum
+uint8 TYPE_DIRTBOX_IN = 0
+uint8 type    # TYPE
+
+uint8 VALUE_TRIGGER = 1	# 1 represents dirtbox is SETTED.
+uint8 value
+================================================================================
+MSG: onOffInfo/CarpetValue
+# type enum
+uint8 TYPE_CARPET_DETECT = 0
+uint8 type    # TYPE
+
+uint8 VALUE_TRIGGER = 1	# 1 represents carpet is detected.
+uint8 value
+================================================================================
+MSG: onOffInfo/WaterBoxValue
+# type enum
+uint8 TYPE_WATERBOX_IN = 0
+uint8 type    # TYPE
+
+uint8 VALUE_WATERBOX_NOT_SET = 0	
+uint8 VALUE_WATERBOX_IS_SET = 1
+uint8 VALUE_ULTRA_WATERBOX_IS_SET = 2
+uint8 value
+================================================================================
+MSG: lds/Lds
+Header header
+LdsPoint[] points
+prediction/PredictPose ldsPose
+================================================================================
+MSG: lds/LdsPoint
+float32 x
+float32 y
+float32 rho
+float32 theta
+float32 power
+
+===TOPIC: /rocklds/RockAct
+===TYPE: rocklds/RockAct
+===MD5: e9729437223d8b14877b7529a0870ce7
+# type enum
+uint8 TYPE_ROCK_START = 0
+uint8 TYPE_ROCK_STOP = 1
+
+uint8 value
+
+===TOPIC: /rocklds/RockResult
+===TYPE: rocklds/RockResult
+===MD5: ea79bb7655743fac30ae3c078268bff0
+# type enum
+uint8 ROCK_COMPLETE = 0
+
+uint8 value
+
+===TOPIC: /rtc/Rtc
+===TYPE: rtc/Rtc
+===MD5: 8cb4f748c9eecaf06fc3e6eb9fac68f1
+uint8 RTC_MSG_TYPE_GET = 0
+uint8 RTC_MSG_TYPE_SET = 1
+uint8 RTC_MSG_TYPE_REPORT = 2
+
+uint8 type
+uint32 utcTime
+
+===TOPIC: /rtc/TimeZone
+===TYPE: rtc/TimeZone
+===MD5: 4839bc60c62dfc6e74614947c0e794d6
+int8 tz
+int8 tz_min
+
+===TOPIC: /schedule/schedulearea
+===TYPE: schedule/schedulearea
+===MD5: 4418e43daf567c64285a4f48bc029861
+uint32[] mids 
+
+
+
+===TOPIC: /schedule/schedulefail
+===TYPE: schedule/schedulefail
+===MD5: 75ea2f0923564283a2ffe47ce307a4ca
+#type enum
+uint8 SCH_FAIL_TYPE_ROBOT_CLEAN_SUCCESS = 0
+uint8 SCH_FAIL_TYPE_ROBOT_FALL = 1
+uint8 SCH_FAIL_TYPE_POWER_LOW = 2
+uint8 SCH_FAIL_TYPE_NO_DUST_BOX = 3
+uint8 SCH_FAIL_TYPE_DOWN_ERROR = 4
+uint8 SCH_FAIL_TYPE_BLOCK_TIME = 5
+uint8 SCH_FAIL_TYPE_CUSTOM_CLEAN = 6
+uint8 SCH_FAIL_TYPE_PATROL = 7
+uint8 SCH_FAIL_TYPE_CLEANING = 8
+uint8 SCH_FAIL_TYPE_REMOTE_CONTROL = 9
+uint8 SCH_FAIL_TYPE_AICOVER_CLEAN = 10
+uint8 SCH_FAIL_TYPE_WATCHPOINT = 11
+uint8 SCH_FAIL_TYPE_NOWATER = 12
+uint8 SCH_FAIL_TYPE_NO_WATCHPOINT = 13
+uint8 SCH_FAIL_TYPE_COLLECTING = 14
+uint8 SCH_FAIL_TYPE_ROBOT_PATROL_SUCCESS = 15
+uint8 event  
+
+
+
+===TOPIC: /schedule/schedulefailtype
+===TYPE: schedule/schedulefailtype
+===MD5: a40b75d33fffbad40a5615352ec566fd
+#type enum
+uint8 SAVE_MAP_TYPE_INCOMPLETE = 0
+uint8 SAVE_MAP_TYPE_AUTOSAVE = 1
+uint8 SAVE_MAP_TYPE_MANUAL_SAVE_1 = 2
+uint8 SAVE_MAP_TYPE_MANUAL_SAVE_2 = 3
+uint8 maptype 
+
+uint32 mapid 
+
+#type enum
+uint8 Normal = 0
+uint8 MapChange = 1    
+uint8 AreaChange = 2         
+uint8 MapDelete = 3         
+uint8 MapChangeStart = 4
+uint8 MapExpandConstruction = 5
+uint8 failtype
+
+uint8[] area
+
+
+
+===TOPIC: /setting/AiSetting
+===TYPE: setting/AiSetting
+===MD5: 661f014d8b34a13d29f18b12555a8734
+uint8 isOn
+
+uint8 AI_OBJ_SETTING_TYPE_WIRE = 0
+uint8 AI_OBJ_SETTING_TYPE_SHOE = 1
+uint8 AI_OBJ_SETTING_TYPE_CLOTH = 2
+uint8 AI_OBJ_SETTING_TYPE_BIN = 3
+uint8 AI_OBJ_SETTING_TYPE_RUG = 4
+
+uint8[] settingVals
+
+
+
+===TOPIC: /setting/AutoCollectOnOff
+===TYPE: setting/AutoCollectOnOff
+===MD5: eba99c841d34320de47744fde3b39f54
+uint8 AUTO_COLLECT_ON = 0
+uint8 AUTO_COLLECT_OFF = 1
+
+uint8 AutoCollectOnOff
+
+
+
+
+
+===TOPIC: /setting/BlockTimeSetting
+===TYPE: setting/BlockTimeSetting
+===MD5: 756aaf7ade1885faceadaae7398acbba
+uint8 isOn
+etime/DateTime startTime
+etime/DateTime endTime
+
+
+
+
+================================================================================
+MSG: etime/DateTime
+uint8 year
+uint8 month
+uint8 date
+uint8 day
+uint8 hour
+uint8 min
+uint8 sec
+
+
+
+
+
+===TOPIC: /setting/CustomSettings
+===TYPE: setting/CustomSettings
+===MD5: ac8adb5095abb1496fc33f03df82de5d
+CustomSetting[] settings
+
+
+
+================================================================================
+MSG: setting/CustomSetting
+uint8 type
+uint8 settingVal
+
+
+
+===TOPIC: /setting/FanMode
+===TYPE: setting/FanMode
+===MD5: 73696a8e9688f16f90212b9067d55afb
+uint8 FAN_MODE_LOW = 0
+uint8 FAN_MODE_HIGH = 1
+uint8 FAN_MODE_HIGH_HIGH = 2
+
+uint8 mode
+uint8 isSilent
+
+
+
+
+
+===TOPIC: /setting/MopChangeNoticeSetting
+===TYPE: setting/MopChangeNoticeSetting
+===MD5: a0161dd62f59fb215c3b8d697ef93e6b
+uint8 isOn
+etime/DateTime noticeTime
+
+
+
+
+
+================================================================================
+MSG: etime/DateTime
+uint8 year
+uint8 month
+uint8 date
+uint8 day
+uint8 hour
+uint8 min
+uint8 sec
+
+
+
+
+
+===TOPIC: /setting/MopMode
+===TYPE: setting/MopMode
+===MD5: 2ac29c791da1888af2804e4516b0d51b
+uint8 MOP_MODE_EFFECTIVE = 0
+uint8 MOP_MODE_PERFORMANCE = 1
+
+uint8 type
+
+
+
+
+
+===TOPIC: /setting/PersonalCleanCount
+===TYPE: setting/PersonalCleanCount
+===MD5: b1160ad7a8d3090e745d2f7e7bb2e068
+uint8 PersonalCleanCount
+
+
+
+
+
+===TOPIC: /setting/PersonalCleanOnOff
+===TYPE: setting/PersonalCleanOnOff
+===MD5: 55f74eef89e637ee837c9f048f754100
+uint8 PERSONAL_CLEAN_OFF = 0
+uint8 PERSONAL_CLEAN_ON = 1
+
+uint8 PersonalCleanOnoff
+
+
+
+
+
+===TOPIC: /setting/SlOnOff
+===TYPE: setting/SlOnOff
+===MD5: 9da6403b0a60bfb40d43405b48c2cadf
+uint8 STRUCT_LIGHT_ON = 0
+uint8 STRUCT_LIGHT_OFF = 1
+
+uint8 StructLightOnOff
+
+
+
+
+
+===TOPIC: /setting/WaterLevel
+===TYPE: setting/WaterLevel
+===MD5: c2d2edce3d88bf9dd1e01e9932b567b3
+uint8 WATER_LEVEL_LOW = 0
+uint8 WATER_LEVEL_MIDDLE = 1
+uint8 WATER_LEVEL_HIGH = 2
+uint8 WATER_LEVEL_ULTRAHIGH = 3
+
+uint8 level
+
+
+
+
+
+===TOPIC: /slam/DynamicDirectionReport
+===TYPE: slam/DynamicDirectionReport
+===MD5: 7328b114b91e2487fcf12e1581a80145
+# type enum
+float32 theta
+
+===TOPIC: /slam/SlamCloseRangeMap
+===TYPE: slam/SlamCloseRangeMap
+===MD5: 6f316e7cbf64fca0a845cd138238aaa6
+SlamMapMeta meta
+int8[] data
+
+================================================================================
+MSG: slam/SlamMapMeta
+uint16 sizex
+uint16 sizey
+float32 xmin
+float32 xmax
+float32 ymin
+float32 ymax
+float32 resolution
+
+
+===TOPIC: /slam/SlamControl
+===TYPE: slam/SlamControl
+===MD5: c9be73d65dd4236cf22404cc9f5f2843
+# type enum
+uint8 SLAM_CONTROL_START = 0
+uint8 SLAM_CONTROL_STOP = 1
+uint8 SLAM_CONTROL_PAUSE  = 2
+uint8 SLAM_CONTROL_RESUME = 3
+uint8 SLAM_CONTROL_RESET = 4
+uint8 type    # TYPE
+
+===TOPIC: /slam/SlamMapControl
+===TYPE: slam/SlamMapControl
+===MD5: 2b923dca442eeef2c39e99e9b5ae3029
+uint8 SLAM_MAP_CONTROL_LOAD = 0
+
+uint8 type
+SlamMap map
+SlamCloseRangeMap closeRangeMap
+================================================================================
+MSG: slam/SlamMap
+SlamMapMeta meta
+int8[] data
+
+================================================================================
+MSG: slam/SlamMapMeta
+uint16 sizex
+uint16 sizey
+float32 xmin
+float32 xmax
+float32 ymin
+float32 ymax
+float32 resolution
+
+
+================================================================================
+MSG: slam/SlamCloseRangeMap
+SlamMapMeta meta
+int8[] data
+
+===TOPIC: /slam/SlamMapRelocationResult
+===TYPE: slam/SlamMapRelocationResult
+===MD5: 7c47dd5ecfcbdfce4c4eaf775f384ed4
+int8 mapRelocationSuccess
+int8 mapType
+
+===TOPIC: /slam/SlamReport
+===TYPE: slam/SlamReport
+===MD5: 168419300c367a9b3384de62d71427dd
+# type enum
+uint8 SLAM_SLIP_WARN = 0
+uint8 SLAM_UPDATE_POSE = 1
+uint8 type    # TYPE
+uint8 value
+prediction/PredictPose pose
+
+================================================================================
+MSG: prediction/PredictPose
+Pose predictPose
+Pose pose
+================================================================================
+MSG: prediction/Pose
+Header header
+float32 x
+float32 y
+float32 theta
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+# 0: no frame
+# 1: global frame
+string frame_id
+
+===TOPIC: /smartvirtualwall/updatasmartvirtualwall
+===TYPE: smartvirtualwall/updatasmartvirtualwall
+===MD5: b897d79d52fce65712eeab34ba19ca72
+#type enum
+uint8 UPDATASMARTVIRTUALWALL = 0
+
+uint8 type 
+
+#type enum
+uint8 SaveIncompleteSmartVirtualWall = 0
+uint8 StartNewClean = 1   
+
+uint8 event 
+
+===TOPIC: /subtasks/clean_task/control
+===TYPE: task/common_task
+===MD5: ffb4497c7ea17b4ebf3b7b12bc9c0670
+string session
+uint8 sn
+uint8 type
+string data
+
+===TOPIC: /subtasks/clean_task/result
+===TYPE: task/common_task_result
+===MD5: bd4a84313a533dbef94451c58e50b3ba
+string session
+uint8 sn
+uint8 type
+uint8 state
+uint8 errcode
+string data
+
+===TOPIC: /subtasks/relocation_task/control
+===TYPE: task/relocation_task
+===MD5: ae6afe4c4e1e6b87d569ea52d7b4b1ec
+string session
+uint8 sn
+uint8 type
+string data
+
+uint8 RELOCATION_TYPE_NORMAL = 0
+uint8 RELOCATION_TYPE_CHARGER = 1
+uint8 RELOCATION_TYPE_RELOAD = 2
+
+uint8 BACK_RELOCATION_STOP = 0
+uint8 BACK_RELOCATION_START = 1
+
+uint8 RELOCATION_NO_IMU = 0
+uint8 RELOCATION_USE_IMU = 1
+
+uint8 relocationType
+slam/SlamMap map
+slam/SlamCloseRangeMap slamCloseRangeMap
+uint8 BackRelocationType
+uint8 IsUseImuType
+slam/SlamMap[] maps
+
+================================================================================
+MSG: slam/SlamMap
+SlamMapMeta meta
+int8[] data
+
+================================================================================
+MSG: slam/SlamMapMeta
+uint16 sizex
+uint16 sizey
+float32 xmin
+float32 xmax
+float32 ymin
+float32 ymax
+float32 resolution
+
+
+================================================================================
+MSG: slam/SlamCloseRangeMap
+SlamMapMeta meta
+int8[] data
+
+===TOPIC: /subtasks/relocation_task/result
+===TYPE: task/relocation_task_result
+===MD5: 31fa9052b70ad939bccca013a2c8a2fa
+string session
+uint8 sn
+uint8 type
+uint8 state
+uint8 errcode
+string data
+uint8 relocationResult
+prediction/PredictPose poseComputed
+
+================================================================================
+MSG: prediction/PredictPose
+Pose predictPose
+Pose pose
+================================================================================
+MSG: prediction/Pose
+Header header
+float32 x
+float32 y
+float32 theta
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+# 0: no frame
+# 1: global frame
+string frame_id
+
+===TOPIC: /task/AiPointCollect
+===TYPE: task/AiPointCollect
+===MD5: 8a83bd4ca4c3503e0557efad492f36cb
+#type enum
+uint8 STARTCOLLECT = 0
+uint8 ENDCOLLECT = 1		
+uint8 POPPOINT = 2
+uint8 type
+
+
+
+
+===TOPIC: /task/AiPoints
+===TYPE: task/AiPoints
+===MD5: d7c5e889f447ee262baaa8fe02cc1183
+AiPointStatue[] AiPoints
+
+
+
+================================================================================
+MSG: task/AiPointStatue
+#type enum
+uint8 UNCLEAN = 0
+uint8 CLEANING = 1		
+uint8 CLEANED = 2
+uint8 CANNOTCLEAN = 3
+uint8 pointstatue
+
+uint8 pointid
+
+
+
+===TOPIC: /task/CurrentArea
+===TYPE: task/CurrentArea
+===MD5: 13b1211c737358f0ee2c333d91f4f543
+int32 curareaid	# current cleaning area id
+
+
+
+===TOPIC: /task/FanMode
+===TYPE: task/FanMode
+===MD5: 73696a8e9688f16f90212b9067d55afb
+uint8 FAN_MODE_LOW = 0
+uint8 FAN_MODE_HIGH = 1
+uint8 FAN_MODE_HIGH_HIGH = 2
+
+uint8 mode
+uint8 isSilent
+
+
+
+
+
+===TOPIC: /task/MapBuildState
+===TYPE: task/MapBuildState
+===MD5: 0ecc9e954b3bedd344827a2d8f5a45f9
+uint8 BUILDING_MAP_STATE_NONE = 0
+uint8 BUILDING_MAP_STATE_BUILDING = 1
+uint8 BUILDING_MAP_STATE_BUILT = 2
+
+uint8 mapBuildState
+uint8 mapSaveState
+
+===TOPIC: /task/RelocationReport
+===TYPE: task/RelocationReport
+===MD5: 32af00c7ef866e9fc2388a489953f089
+uint8 RELOCATION_TYPE_NORMAL = 0
+uint8 RELOCATION_TYPE_CHARGER = 1
+uint8 RELOCATION_TYPE_RELOAD = 2
+uint8 RELOCATION_TYPE_GO_CHARGER = 3
+uint8 relocationType
+
+uint8 RELOCATION_EXECUTE_TYPE_START = 0
+uint8 RELOCATION_EXECUTE_TYPE_FINISHED = 1
+uint8 RELOCATION_EXECUTE_TYPE_CANCEL = 2
+uint8 relocationExecution
+
+# result of relocation , 0 is failed , 1 is success.
+uint8 relocationResult
+
+uint8 hasMapStored
+
+===TOPIC: /task/TaskResult
+===TYPE: task/TaskResult
+===MD5: 9291ffb3656f745bd5f7981604b9638c
+#typed enum
+uint8 GOTO = 0
+uint8 PATROL = 1
+uint8 REMOTE = 2
+uint8 CLEAN = 3
+uint8 RETURN = 4
+uint8 type
+
+#typed enum
+uint8 TASK_SUCCESS = 0
+uint8 TASK_FAILD = 1
+uint8 TASK_WORKING = 2
+uint8 RETURN_FAILD_FIND_CHARGE = 3
+uint8 RETURN_FAILD_CANNOT_FIND_CHARGE = 4
+
+uint8 result
+
+string data
+
+===TOPIC: /task/TaskStateReport
+===TYPE: task/TaskStateReport
+===MD5: 7f1ec70d8debe1dd6d29d69cc9d76ab4
+# tasktype is WorkType
+uint8 tasktype
+# stateType is TaskStateType
+uint32 stateType
+# state for every type.
+uint32 state
+
+===TOPIC: /task/VideoState
+===TYPE: task/VideoState
+===MD5: 16d5409fd981cbfb3f2aedb755d51eb7
+#typed enum
+uint8 VIDEO_ON = 0
+uint8 VIDEO_OFF = 1
+uint8 state
+
+uint8 NO_NOTICE = 0
+uint8 VOICE_NOTICE = 1
+uint8 LIGHT_NOTICE = 2
+uint8 notice
+
+===TOPIC: /task/WaterLevel
+===TYPE: task/WaterLevel
+===MD5: c2d2edce3d88bf9dd1e01e9932b567b3
+uint8 WATER_LEVEL_LOW = 0
+uint8 WATER_LEVEL_MIDDLE = 1
+uint8 WATER_LEVEL_HIGH = 2
+uint8 WATER_LEVEL_ULTRAHIGH = 3
+
+uint8 level
+
+
+
+
+
+===TOPIC: /task/WorkState
+===TYPE: task/WorkState
+===MD5: 85234983b5d2c6828f53442a64052ae3
+uint8 worktype
+uint8 state
+WorkData data
+uint8 workcause
+
+================================================================================
+MSG: task/WorkData
+CleanWorkData cleanData
+ExtraWorkData extraWorkData
+
+================================================================================
+MSG: task/CleanWorkData
+uint8[] ids			# areaids or ai point ids 
+map/Dot[] customAreas   # two dots forms one area.  spot clean
+uint8[] cycles
+
+uint8[] states		# state of the clean procedure.
+
+
+
+
+================================================================================
+MSG: map/Dot
+float32 x
+float32 y
+
+================================================================================
+MSG: task/ExtraWorkData
+uint8[] ids					# checkpoint ids or patrol point ids. ai guide types.
+prediction/Pose[] poses		# goto poses
+RemoteMove remotes    # remote control info
+
+uint8[] states		# state of the extra work procedure.
+
+ 
+
+================================================================================
+MSG: prediction/Pose
+Header header
+float32 x
+float32 y
+float32 theta
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+
+================================================================================
+MSG: task/RemoteMove
+# move type.
+uint8 RemoteMoveType
+uint8 REMOTE_MOVE_FORWARD = 0
+uint8 REMOTE_MOVE_BACKWARD = 1
+uint8 REMOTE_MOVE_STOP = 2
+uint8 REMOTE_MOVE_BRAKE = 3
+uint8 REMOTE_MOVE_SPINLEFT = 4
+uint8 REMOTE_MOVE_SPINRIGHT = 5
+uint8 REMOTE_MOVE_GOTO = 6
+uint8 REMOTE_MOVE_ROTATE = 7
+uint8 REMOTE_MOVE_REVERSE = 8
+uint8 REMOTE_MOVE_MVA_CUSTOM = 9
+uint8 REMOTE_MOVE_TURN_LEFT = 10
+uint8 REMOTE_MOVE_TURN_RIGHT = 11
+
+uint16 lastTime
+int16 v	
+int16 w
+
+===TOPIC: /task/chargereport
+===TYPE: task/chargereport
+===MD5: dc544caefd9bed6af8729dca2733a666
+#type enum
+uint8 CHARGE_MSG_REPORT = 0
+uint8 type    
+
+#type enum
+uint8 CHARGE_START_RANDOM_OFF = 0
+uint8 CHARGE_START_ADD = 1
+uint8 CHARGE_START_RANDOM_ON = 2
+uint8 event
+
+uint32 distance   
+
+===TOPIC: /task/sleepstate
+===TYPE: task/sleepstate
+===MD5: 9dd1a1814e7e93d60a193a4cf5886c71
+#type enum
+uint8 SLEEPSTATE = 0
+
+uint8 type 
+
+#type enum
+uint8 RobotSleep = 1
+uint8 RobotWakeUp = 0   
+uint8 RobotLowPowerOff = 2   
+
+uint8 event 
+
+===TOPIC: /wheel/SetWheelSpeed
+===TYPE: wheel/SetWheelSpeed
+===MD5: 6136b114420b8e6600151ac57541e32e
+# type enum
+uint8 SPEED_TYPE_DRIVING = 0
+uint8 SPEED_TYPE_PHYSICAL = 1
+uint8 speed_type    # SPEED_TYPE
+
+float32[] speed
+
+===TOPIC: /wheel/WheelDistanceReport
+===TYPE: wheel/WheelDistanceReport
+===MD5: 76589ac08503ec0ec947ad79c9cd2a4e
+Header header
+float32[] wheelDistance
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+# 0: no frame
+# 1: global frame
+string frame_id
+
+===TOPIC: /wifimsg/PatrolPoints
+===TYPE: wifimsg/PatrolPoints
+===MD5: 9d054428df5f781b0c8644b024daabdb
+PatrolPointStatue[] PatrolPoints
+
+
+
+================================================================================
+MSG: wifimsg/PatrolPointStatue
+#type enum
+uint8 UNARRIVE = 0
+uint8 TAKINGPHOTO = 1		
+uint8 FINISH = 2
+uint8 CANNOTARRIVE = 3
+uint8 pointstatue
+
+uint8 pointid
+
+
+
+===TOPIC: /wifimsg/breakpointstatereport
+===TYPE: wifimsg/breakpointstatereport
+===MD5: 4d091739bd18abdbbcf3997e0af45504
+#type enum
+
+uint8 NO_BREAK_POINT_CLEAN_TASK = 0
+uint8 BREAK_POINT_TO_RETURN = 1
+uint8 BREAK_POINT_START_CHARGING = 2
+uint8 FULL_BATTERY_CONTIUNE_CLEAN = 3
+
+uint8 event   
+
+===TOPIC: /wifimsg/handrelocation
+===TYPE: wifimsg/handrelocation
+===MD5: faffb1e25ed4353b5efc0c45fe26e15a
+#type enum
+uint8 APP_TRIGGER_RELOCATION = 0
+uint8 event   
+
+===TOPIC: /wifimsg/wifimsg
+===TYPE: wifimsg/wifimsg
+===MD5: b5437142dcc6937283df2032051720a6
+#type enum
+uint8 APP_SECOND_LEVEL_PASS = 0
+uint8 ROBOT_OTA = 1
+uint8 type    
+
+#type enum
+uint8 APP_EVENT_TRIGGER = 0
+uint8 APP_EVENT_RECOVER = 1
+uint8 ROBOT_IS_OTA = 2
+uint8 ROBOT_IS_NORMAL = 3
+uint8 event   
+
+===TOPIC: /wifimsg/wifimsgcameractrl
+===TYPE: wifimsg/wifimsgcameractrl
+===MD5: b841b43d816d32f8c6c541baaafa2b65
+#type enum
+uint8 PHOTO_GRAPH = 0
+uint8 UPLOAD_PICTURE = 1
+uint8 DELETE_PICTURE = 2
+uint8 type    
+
+uint8 NUMBER
+uint8 INTERVAL
+string[] picturename  
+
+===TOPIC: /wifimsg/wifimsgcamerareport
+===TYPE: wifimsg/wifimsgcamerareport
+===MD5: 0149cdcaf38a1f6387afcf12b26e45fc
+#type enum
+uint8 PHOTO_REPORT = 0
+uint8 type   
+ 
+string[] picturename  
+
+===TOPIC: /wifimsg/wifimsgreport
+===TYPE: wifimsg/wifimsgreport
+===MD5: d35a9bd0bb010f30fb708884dd5060a0
+#type enum
+uint8 ROBOT_MSG_REPORT = 0
+uint8 type    
+
+#type enum
+uint8 ROBOT_STRIVE_MODE = 0
+uint8 RELOCATION_SUCCEE_RESUME_CLEAN = 1
+uint8 RELOCATION_SUCCEE_START_CLEAN = 2
+uint8 RELOCATION_SUCCEE_START_RETURN = 3
+uint8 RELOCATION_SUCCEE_POS_UPDATA = 4
+uint8 RELOCATION_FAIL_NEW_CLEAN = 5
+uint8 RELOCATION_FAIL_START_RETURN = 6
+uint8 RELOCATION_FAIL_POS_LOSE = 7
+uint8 MAP_CHANGE_MAP_UPDATA = 8
+uint8 MAP_RESTORE_SUCCEE = 9
+uint8 RELOCATION_FAIL = 10
+uint8 START_ON_NOT_CPRPET_AREA = 11 #1033
+uint8 CLEAN_FINISHED_GO_CHARGING = 12 #1021
+uint8 LOW_BATTERY_CHARGING = 13 #1025
+uint8 LOW_BATTERY_GO_CHARGE = 14 #1024
+uint8 ROBOT_STRIVE_WATER_LOW = 15 
+uint8 FULL_BATTERY_CONTIUNE_CLEAN = 16
+uint8 RELOCATION_FAIL_START_CLEAN_SIMPLEMODE = 17
+uint8 MAP_RESTORE_FAIL = 18
+uint8 CHARGING = 19
+uint8 REMOTING = 20
+uint8 RELOCATION_SUCCEE_RESUME_GOTO = 21
+uint8 RELOCATION_SUCCEE_OTHER_MAP = 22
+uint8 PLEASE_TAKE_OFF_DUSTER = 23
+uint8 AI_CLEAN_FINISHED_GO_CHARGING = 24
+uint8 DIVIDE_AREA_FAILED = 25 #1082
+uint8 MERGE_AREAS_FAILED =26 #1081
+uint8 DIVIDE_AREA_TOO_SMALL =27 # 1083
+uint8 DIVIDE_AREA_CROSS_DOOR =28 #1084
+uint8 T_3D_COLLECT_COMPLETE = 29
+uint8 T_3D_COVER_OPEN = 30
+uint8 T_3D_NO_BAG = 31
+uint8 T_3D_BAG_FULL = 32
+uint8 T_3D_COLLECTING = 33
+uint8 TIMEOUT_POWER_OFF = 34
+uint8 NO_POINT_TO_PATROL = 35
+uint8 PATROL_FINISHED_GO_CHARGING = 36
+uint8 PLEASE_BUILD_COMPLETE_MAP = 37
+uint8 EVERY_POINT_CANNOT_ARRIVE = 38
+uint8 T_3D_WIND_WAY_BLOCK = 39
+
+uint8 event   
+
+===TOPIC: /worklog/AiWorkStatistic
+===TYPE: worklog/AiWorkStatistic
+===MD5: 568e34b3536aad3ca33f0de6e94bacbe
+# ai work statistics
+# work id.
+uint32 workid
+
+# total avoid cnts
+uint32 totalAvoidCnt
+# avoid types. type id is same as classid in ai/AIObjectDetResult
+uint32[] avoidTypes
+# each avoid cnts for types. same length with avoidTypes
+uint32[] avoidCnts
+
+
+
+
+===TOPIC: /worklog/ManipulateLog
+===TYPE: worklog/ManipulateLog
+===MD5: 0bc488edfb13e890cca4d8dd22bf3d9f
+uint8 LOG_MANIPULATE_TYPE_START = 0
+uint8 LOG_MANIPULATE_TYPE_STOP = 1
+uint8 LOG_MANIPULATE_TYPE_CLEAR = 2
+
+uint8 type
+# full task info with start and cause for stop.
+task/WorkState task
+
+
+
+================================================================================
+MSG: task/WorkState
+uint8 worktype
+uint8 state
+WorkData data
+uint8 workcause
+
+================================================================================
+MSG: task/WorkData
+CleanWorkData cleanData
+ExtraWorkData extraWorkData
+
+================================================================================
+MSG: task/CleanWorkData
+uint8[] ids			# areaids or ai point ids 
+map/Dot[] customAreas   # two dots forms one area.  spot clean
+uint8[] cycles
+
+uint8[] states		# state of the clean procedure.
+
+
+
+
+================================================================================
+MSG: map/Dot
+float32 x
+float32 y
+
+================================================================================
+MSG: task/ExtraWorkData
+uint8[] ids					# checkpoint ids or patrol point ids. ai guide types.
+prediction/Pose[] poses		# goto poses
+RemoteMove remotes    # remote control info
+
+uint8[] states		# state of the extra work procedure.
+
+ 
+
+================================================================================
+MSG: prediction/Pose
+Header header
+float32 x
+float32 y
+float32 theta
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+
+================================================================================
+MSG: task/RemoteMove
+# move type.
+uint8 RemoteMoveType
+uint8 REMOTE_MOVE_FORWARD = 0
+uint8 REMOTE_MOVE_BACKWARD = 1
+uint8 REMOTE_MOVE_STOP = 2
+uint8 REMOTE_MOVE_BRAKE = 3
+uint8 REMOTE_MOVE_SPINLEFT = 4
+uint8 REMOTE_MOVE_SPINRIGHT = 5
+uint8 REMOTE_MOVE_GOTO = 6
+uint8 REMOTE_MOVE_ROTATE = 7
+uint8 REMOTE_MOVE_REVERSE = 8
+uint8 REMOTE_MOVE_MVA_CUSTOM = 9
+uint8 REMOTE_MOVE_TURN_LEFT = 10
+uint8 REMOTE_MOVE_TURN_RIGHT = 11
+
+uint16 lastTime
+int16 v	
+int16 w
+
+===TOPIC: /worklog/ReportLog
+===TYPE: worklog/ReportLog
+===MD5: f4711f66fa838f79caec60a492e26cd1
+# report type is for start or end. 0 is log start , 1 is log end.
+uint8 reportType
+LogContent log
+
+
+
+
+================================================================================
+MSG: worklog/LogContent
+# work id to recogonize work. 
+uint32 workid
+# work type is task/WorkType
+uint8 worktype
+# work data contains working data.
+task/WorkData workdata
+# utc ts of start work time.
+time startts
+# utc ts of end work time.
+time endts
+# start reason of work. 
+uint8 startReason
+# stop reason of work.
+uint8 stopReason
+# work statistics
+WorkStatistic statistic
+# waterbox type 0 is not installed , 1 is normal waterbox , 2 is ultra waterbox.
+uint8 waterboxType
+
+
+
+
+================================================================================
+MSG: task/WorkData
+CleanWorkData cleanData
+ExtraWorkData extraWorkData
+
+================================================================================
+MSG: task/CleanWorkData
+uint8[] ids			# areaids or ai point ids 
+map/Dot[] customAreas   # two dots forms one area.  spot clean
+uint8[] cycles
+
+uint8[] states		# state of the clean procedure.
+
+
+
+
+================================================================================
+MSG: map/Dot
+float32 x
+float32 y
+
+================================================================================
+MSG: task/ExtraWorkData
+uint8[] ids					# checkpoint ids or patrol point ids. ai guide types.
+prediction/Pose[] poses		# goto poses
+RemoteMove remotes    # remote control info
+
+uint8[] states		# state of the extra work procedure.
+
+ 
+
+================================================================================
+MSG: prediction/Pose
+Header header
+float32 x
+float32 y
+float32 theta
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data 
+# in a particular coordinate frame.
+# 
+# sequence ID: consecutively increasing ID 
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+
+================================================================================
+MSG: task/RemoteMove
+# move type.
+uint8 RemoteMoveType
+uint8 REMOTE_MOVE_FORWARD = 0
+uint8 REMOTE_MOVE_BACKWARD = 1
+uint8 REMOTE_MOVE_STOP = 2
+uint8 REMOTE_MOVE_BRAKE = 3
+uint8 REMOTE_MOVE_SPINLEFT = 4
+uint8 REMOTE_MOVE_SPINRIGHT = 5
+uint8 REMOTE_MOVE_GOTO = 6
+uint8 REMOTE_MOVE_ROTATE = 7
+uint8 REMOTE_MOVE_REVERSE = 8
+uint8 REMOTE_MOVE_MVA_CUSTOM = 9
+uint8 REMOTE_MOVE_TURN_LEFT = 10
+uint8 REMOTE_MOVE_TURN_RIGHT = 11
+
+uint16 lastTime
+int16 v	
+int16 w
+================================================================================
+MSG: worklog/WorkStatistic
+# work statistics
+# work time is second unit.
+uint32 worktime
+# work area. dm2.
+uint32 workarea
+# extra area.
+uint32 extraArea
+# waterbox type.
+uint8 waterboxType
+
+
+
+
+
+===TOPIC: /worklog/WorkStatistic
+===TYPE: worklog/WorkStatistic
+===MD5: e7b7d0735549a79e768dae37254e4c13
+# work statistics
+# work time is second unit.
+uint32 worktime
+# work area. dm2.
+uint32 workarea
+# extra area.
+uint32 extraArea
+# waterbox type.
+uint8 waterboxType
+
+
+
+
+
+===TOPIC: /worklog/WorkStatisticToWifi
+===TYPE: worklog/WorkStatisticToWifi
+===MD5: a54e1098445f2092ed11f984eeb3cf90
+# work statistics
+# work type
+uint8 worktype
+# work time is second unit.
+uint32 worktime
+# work area. dm2.
+uint32 workarea
+# extra area.
+uint32 extraArea
+# waterbox type.
+uint8 waterboxType
+#start time
+time startTime
+
+
+
+
+
