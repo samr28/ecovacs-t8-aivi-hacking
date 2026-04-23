@@ -1,0 +1,1 @@
+- [Keep robot stock](feedback_robot_stock.md) — run scripts from Mac, minimize files deployed to robot
