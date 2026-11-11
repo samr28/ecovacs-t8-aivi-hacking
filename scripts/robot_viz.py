@@ -14,6 +14,8 @@ Topics served (all SI units — metres / radians, like ROS):
   /lidar        foxglove.PointCloud    current scan, frame "lidar"     (ROS: sensor_msgs/PointCloud2)
   /tf           foxglove.FrameTransforms map → base_link → lidar        (ROS: tf2_msgs/TFMessage)
   /robot/path   foxglove.PosesInFrame  recent trajectory in "map"      (ROS: nav_msgs/Path)
+  /camera       foxglove.CompressedVideo  H.264 from the robot's hardware encoder, frame "camera"
+                                       (ROS: foxglove_msgs/CompressedVideo; view in an Image panel)
 
 Frames:
   map        the robot firmware's own world frame (pose from /lds/Lds.ldsPose, mm → m)
@@ -38,7 +40,7 @@ from collections import deque
 from urllib.parse import urlparse
 
 import foxglove
-from foxglove.messages import (FrameTransform, FrameTransforms, PackedElementField,
+from foxglove.messages import (CompressedVideo, FrameTransform, FrameTransforms, PackedElementField,
                                PackedElementFieldNumericType, PointCloud, Pose, PosesInFrame,
                                Quaternion, Timestamp, Vector3)
 
@@ -182,6 +184,91 @@ def on_lds(raw: bytes):
                  log_time=t)
 
 
+# ── Camera: hardware H.264 over ssh → foxglove.CompressedVideo ───────────────
+# Same pipeline as robot_camera.sh (see notes/camera.md): ISP mainpath → mpi_enc_test → stdout.
+# Stream facts (measured): one slice per frame, IDR every 60 frames (2 s @ 30 fps), but SPS/PPS
+# are sent only once at the very start. Foxglove needs each keyframe to be decodable on its own
+# (a viewer may join late), so we cache SPS/PPS and prepend them to every IDR frame.
+
+def camera_remote_cmd(w: int, h: int) -> str:
+    return (
+        f"v4l2-ctl -d /dev/video0 --set-fmt-video=width={w},height={h},pixelformat=NV12 >/dev/null 2>&1;"
+        f"{{ v4l2-ctl -d /dev/video0 --stream-mmap=4 --stream-count=0 --stream-to=- 2>/dev/null"
+        # mpi_enc_test logs to *stdout*, which corrupted frames when the video also went to stdout.
+        # So: video → fd 3 → `cat` → ssh; the tool's own stdout/stderr → /dev/null.
+        f" | mpi_enc_test -i /dev/stdin -o /dev/fd/3 -w {w} -h {h} -f 0 -t 7 -n 0"
+        f" 3>&1 1>/dev/null 2>/dev/null | cat; }} &"
+        # watchdog: mpi_enc_test ignores EPIPE, so kill the group once our ssh session is gone
+        "while kill -0 $PPID 2>/dev/null && [ $(cut -d' ' -f4 /proc/$$/stat) = $PPID ]; do sleep 1; done;"
+        "kill 0")
+
+
+def iter_nals(stream):
+    """Yield H.264 NAL units (without start codes) from an Annex-B byte stream."""
+    buf = b''
+    while True:
+        chunk = stream.read1(65536)
+        if not chunk:
+            break
+        buf += chunk
+        starts = [m for m in _find_starts(buf)]
+        # emit all complete NALs (everything between consecutive start codes)
+        for (s0, l0), (s1, _l1) in zip(starts, starts[1:]):
+            yield buf[s0 + l0:s1]
+        if starts:
+            buf = buf[starts[-1][0]:]
+
+
+def _find_starts(b: bytes):
+    i = b.find(b'\x00\x00\x01')
+    while i != -1:
+        if i > 0 and b[i - 1] == 0:
+            yield (i - 1, 4)
+        else:
+            yield (i, 3)
+        i = b.find(b'\x00\x00\x01', i + 3)
+
+
+def run_camera(w: int, h: int):
+    import subprocess
+    sc = b'\x00\x00\x00\x01'
+    while True:
+        proc = subprocess.Popen(['ssh', '-o', 'ServerAliveInterval=5', rw.ROBOT, camera_remote_cmd(w, h)],
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        rw._tunnels.append(proc)              # terminated with the tunnels on exit
+        print('  camera stream started')
+        sps = pps = None
+        pending = b''                         # SPS/PPS/SEI waiting for the next slice
+        frames = 0
+        for nal in iter_nals(proc.stdout):
+            if not nal:
+                continue
+            t = nal[0] & 0x1f
+            if t == 7:
+                sps = nal
+            elif t == 8:
+                pps = nal
+            if t not in (1, 5):               # not a slice → attach to the next frame
+                if t not in (7, 8):
+                    pending += sc + nal
+                continue
+            data = pending + sc + nal
+            if t == 5:                        # IDR: make it self-contained
+                if not (sps and pps):
+                    pending = b''; continue
+                data = sc + sps + sc + pps + data
+            elif frames == 0:
+                pending = b''; continue       # can't start on a P-frame
+            pending = b''
+            now = time.time_ns()
+            foxglove.log('/camera', CompressedVideo(timestamp=ts(now), frame_id='camera',
+                                                    data=data, format='h264'), log_time=now)
+            frames += 1
+        print('  camera stream ended — restarting in 2 s')
+        proc.kill()
+        time.sleep(2)
+
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 SOURCES = [
@@ -192,6 +279,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--port', type=int, default=8765)
     ap.add_argument('--record', metavar='FILE.mcap', help='also record everything to an MCAP file')
+    ap.add_argument('--no-camera', action='store_true', help="don't stream the camera")
+    ap.add_argument('--cam-size', default='640x480', metavar='WxH', help='camera resolution (default 640x480)')
     args = ap.parse_args()
 
     ensure_master()
@@ -201,6 +290,9 @@ def main():
 
     for topic, typ, handler in SOURCES:
         threading.Thread(target=run_subscriber, args=(topic, typ, handler), daemon=True).start()
+    if not args.no_camera:
+        w, h = (int(v) for v in args.cam_size.lower().split('x'))
+        threading.Thread(target=run_camera, args=(w, h), daemon=True).start()
 
     def _term(*_):
         raise KeyboardInterrupt

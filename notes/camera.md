@@ -18,7 +18,16 @@ Pipeline (nothing installed on the robot — it's all one ssh command line):
 - ~30 fps at 640x480, ~1.2 Mbit/s (~5 KB per P-frame vs 460 KB raw NV12 — ~100× less than raw).
 - `mpi_enc_test` (shipped Rockchip test tool) works with `-i /dev/stdin -o /dev/stdout -f 0` (NV12) `-t 7`
   (H.264) `-n 0` (no frame limit). It emits a single IDR then P-frames.
-- **Gotcha:** `mpi_enc_test` ignores write errors, so when the ssh client disconnects the robot-side
+- **Gotcha 1 — logs on stdout:** `mpi_enc_test` prints its log lines (`mpi_enc_test: test_mpp_run encoded
+  frame 60 size ...`) to **stdout**. With `-o /dev/stdout` they were spliced into the H.264 in 4 KB bursts →
+  a corrupt frame every ~10 s (green smear in ffplay, red ✕ in Foxglove until the next keyframe). Fix: write
+  the video to fd 3 and discard the tool's stdout: `mpi_enc_test -o /dev/fd/3 ... 3>&1 1>/dev/null 2>/dev/null | cat`
+  (the `cat` makes fd 3 a plain pipe). Verified: 758 frames, 0 decode errors.
+- Stream structure: one slice per frame, IDR every 60 frames (2 s), but **SPS/PPS only once at the start** —
+  `robot_viz.py` caches them and prepends them to every IDR so a late-joining viewer can decode.
+- Foxglove: `scripts/robot_viz.py` publishes this as `/camera` (`foxglove.CompressedVideo`, h264); view it
+  in an **Image** panel.
+- **Gotcha 2:** `mpi_enc_test` ignores write errors, so when the ssh client disconnects the robot-side
   pipeline keeps running and holds `/dev/video0`. The script's remote command runs a watchdog that polls
   the ssh session process and `kill 0`s the process group once it's gone (cleanup within ~1 s).
 - Conflicts: `/dev/video0` is the device medusa's `camera1` (app live view) uses. Don't stream while

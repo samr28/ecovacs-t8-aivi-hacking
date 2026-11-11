@@ -20,12 +20,15 @@ if [[ "${1:-}" == "--record" ]]; then RECORD="${2:?output file}"; shift 2; fi
 W=${1:-640}
 H=${2:-480}
 
+# mpi_enc_test prints its log lines to *stdout*; with the video also on stdout those lines got spliced
+# into the H.264 and corrupted frames. So the video goes to fd 3 (→ cat → ssh) and its stdout is discarded.
 # mpi_enc_test ignores write errors, so when the ssh client goes away the pipeline would keep
 # running and hold /dev/video0. The watchdog loop polls our ssh session process ($PPID) and kills
 # the whole process group (kill 0) once it's gone.
 REMOTE="v4l2-ctl -d /dev/video0 --set-fmt-video=width=$W,height=$H,pixelformat=NV12 >/dev/null 2>&1;
 { v4l2-ctl -d /dev/video0 --stream-mmap=4 --stream-count=0 --stream-to=- 2>/dev/null \
-  | mpi_enc_test -i /dev/stdin -o /dev/stdout -w $W -h $H -f 0 -t 7 -n 0 2>/dev/null; } &
+  | mpi_enc_test -i /dev/stdin -o /dev/fd/3 -w $W -h $H -f 0 -t 7 -n 0 3>&1 1>/dev/null 2>/dev/null \
+  | cat; } &
 while kill -0 \$PPID 2>/dev/null && [ \$(cut -d' ' -f4 /proc/\$\$/stat) = \$PPID ]; do sleep 1; done
 kill 0"
 
