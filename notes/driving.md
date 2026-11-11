@@ -42,14 +42,14 @@ float32[] speed        # [left, right]
 - Positive = forward. `[-w, +w]` spins **left / counter-clockwise**, θ increases (ROS convention).
 - **Odometry `/wheel/WheelDistanceReport`**: cumulative per wheel, **mm**, ~40 Hz.
 - **`/robot/Robot` pose x/y are mm** (not metres). θ in radians.
-- Effective wheelbase ≈ (36.4 + 35.7) / 0.30 ≈ **240 mm**.
+- Effective wheelbase ≈ **228 mm** (from a 15 s spin vs IMU heading, `imu_odometry.md`; a first 1.5 s spin suggested ~240 mm).
 - Wheel motor current ~50–80 mA while driving on hard floor (`/robot/Robot` currents types 5/6).
 
 ### Driving from Foxglove
 
 `.venv/bin/python scripts/robot_viz.py --drive` (opt-in) also accepts `geometry_msgs/Twist` on **`/cmd_vel`**
 from Foxglove's **Teleop** panel (Foxglove WebSocket `ClientPublish` capability, JSON encoding) and converts it
-with differential-drive kinematics: `left/right = v ∓ ω·B/2`, B = 240 mm, scaled so neither wheel exceeds
+with differential-drive kinematics: `left/right = v ∓ ω·B/2`, B = 228 mm, scaled so neither wheel exceeds
 `--max-speed` (default 100 mm/s; `--max-turn` default 0.8 rad/s), then × 6 into wheel-command units.
 
 Teleop panel settings that matter (the defaults don't work well):

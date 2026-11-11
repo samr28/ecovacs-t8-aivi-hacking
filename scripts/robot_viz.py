@@ -15,7 +15,11 @@ notes/driving.md (--drive).
 Topics served (all SI units — metres / radians, like ROS):
   /lidar        foxglove.PointCloud    current scan, frame "lidar"     (ROS: sensor_msgs/PointCloud2)
   /tf           foxglove.FrameTransforms map → base_link → lidar        (ROS: tf2_msgs/TFMessage)
-  /robot/path   foxglove.PosesInFrame  recent trajectory in "map"      (ROS: nav_msgs/Path)
+  /robot/path   foxglove.PosesInFrame  firmware's corrected pose trail in "map" (ROS: nav_msgs/Path)
+  /robot/path_predict                  firmware's dead-reckoning trail, for comparison
+  /robot/pose   JSON                   corrected + dead-reckoning pose and their difference, 20 Hz
+  /imu          JSON                   raw gyros[] (gyros[0] = integrated yaw, rad), yaw_deg, yaw_rate_dps
+  /odom/wheels  JSON                   cumulative left/right wheel travel (mm) + per-wheel speed (mm/s)
   /camera       foxglove.CompressedVideo  H.264 from the robot's hardware encoder, frame "camera"
                                        (ROS: foxglove_msgs/CompressedVideo; view in an Image panel)
   /robot/body   foxglove.SceneUpdate   robot outline + bumpers / cliff / wheel-drop markers, IR values,
@@ -31,7 +35,7 @@ With --drive (opt-in, moves the robot):
   Don't run robot_teleop.py at the same time — both would publish wheel speeds.
 
 Frames:
-  map        the robot firmware's own world frame (pose from /lds/Lds.ldsPose, mm → m)
+  map        the robot firmware's own world frame (pose from /prediction/PredictPose, mm → m)
   base_link  the robot body. x forward, y left, θ CCW-positive (verified with wheel tests and by
              placing objects behind / left of the robot)
   lidar      the LDS. Same orientation as base_link; mounting offset unknown → identity (notes/lidar.md)
@@ -42,6 +46,7 @@ computed from the first message, so relative timing between messages is preserve
 
 import argparse
 import math
+import os
 import signal
 import socket
 import struct
@@ -88,7 +93,41 @@ def ensure_master():
         sys.exit('could not reach ROS master through ssh tunnel')
 
 
-_node_ports: dict[str, int] = {}
+# robot port → (local port, ssh process). Shared by all subscriber threads.
+# Tunnels are created one at a time under a lock: robot_watch.open_tunnel picks a "free" local port by
+# bind-and-close, so concurrent creation could hand two threads the same port (one ssh then fails, or
+# forwards to the wrong robot port) — which showed up as a random topic stuck on "Connection refused".
+_node_ports: dict[int, tuple[int, object]] = {}
+_tunnel_lock = threading.Lock()
+
+def _tunnel(rport: int) -> int:
+    with _tunnel_lock:
+        ent = _node_ports.get(rport)
+        if ent and ent[1].poll() is None:                      # cached and its ssh is still alive
+            return ent[0]
+        local = rw.open_tunnel(rport)
+        _node_ports[rport] = (local, rw._tunnels[-1])
+        try:
+            socket.create_connection(('localhost', local), 2).close()
+        except OSError:
+            _drop_tunnel(rport, locked=True)
+            raise ConnectionError(f'tunnel to robot:{rport} did not come up')
+        return local
+
+def _drop_tunnel(rport: int, locked: bool = False):
+    """Forget (and kill) a tunnel so the next attempt builds a fresh one."""
+    def drop():
+        ent = _node_ports.pop(rport, None)
+        if ent:
+            try:
+                ent[1].terminate()
+            except Exception:
+                pass
+    if locked:
+        drop()
+    else:
+        with _tunnel_lock:
+            drop()
 
 def subscribe(topic: str, msg_type: str, node: str = '/node') -> socket.socket:
     """requestTopic on the publishing node → tunnel its TCPROS port → handshake. Returns the socket."""
@@ -97,15 +136,19 @@ def subscribe(topic: str, msg_type: str, node: str = '/node') -> socket.socket:
     if code != 1:
         raise RuntimeError(f'lookupNode {node}: {msg}')
     rport = urlparse(uri).port
-    if rport not in _node_ports:
-        _node_ports[rport] = rw.open_tunnel(rport)
-    api = xmlrpc.client.ServerProxy(f'http://localhost:{_node_ports[rport]}')
-    code, msg, proto = api.requestTopic(CALLER_ID, topic, [['TCPROS']])
+    api = xmlrpc.client.ServerProxy(f'http://localhost:{_tunnel(rport)}')
+    try:
+        code, msg, proto = api.requestTopic(CALLER_ID, topic, [['TCPROS']])
+    except OSError:
+        _drop_tunnel(rport)
+        raise
     if code != 1:
         raise RuntimeError(f'requestTopic {topic}: {msg}')
-    if proto[2] not in _node_ports:
-        _node_ports[proto[2]] = rw.open_tunnel(proto[2])
-    s = socket.create_connection(('localhost', _node_ports[proto[2]]), 5)
+    try:
+        s = socket.create_connection(('localhost', _tunnel(proto[2])), 5)
+    except OSError:
+        _drop_tunnel(proto[2])
+        raise
     s.sendall(rw._encode_conn_header({'callerid': CALLER_ID, 'topic': topic,
                                       'type': msg_type, 'md5sum': '*', 'tcp_nodelay': '1'}))
     rw._read_framed(s)
@@ -176,7 +219,7 @@ POINT_FIELDS = [
 path: deque = deque(maxlen=PATH_LEN)
 
 def on_lds(raw: bytes):
-    (secs, nsecs), n, pts, (px, py, pth) = decode_lds(raw)
+    (secs, nsecs), n, pts, _pose = decode_lds(raw)
     t = clock(secs, nsecs)
 
     # Points: mm → m, z = 0, keep range for colouring. 16-byte stride (x, y, z, range).
@@ -187,18 +230,96 @@ def on_lds(raw: bytes):
         position=Vector3(x=0, y=0, z=0), orientation=yaw_quat(0)),
         point_stride=16, fields=POINT_FIELDS, data=bytes(out)), log_time=t)
 
-    # TF: map → base_link (robot pose at scan time), base_link → lidar (identity until measured)
+    # TF base_link → lidar (identity until the mounting offset is measured).
+    # map → base_link comes from /prediction/PredictPose (on_predict) at 20 Hz for smooth motion.
     foxglove.log('/tf', FrameTransforms(transforms=[
-        FrameTransform(timestamp=ts(t), parent_frame_id='map', child_frame_id='base_link',
-                       translation=Vector3(x=px, y=py, z=0.0), rotation=yaw_quat(pth)),
         FrameTransform(timestamp=ts(t), parent_frame_id='base_link', child_frame_id='lidar',
                        translation=Vector3(x=0.0, y=0.0, z=0.0), rotation=yaw_quat(0.0)),
     ]), log_time=t)
 
-    # Trajectory
-    path.append(Pose(position=Vector3(x=px, y=py, z=0.0), orientation=yaw_quat(pth)))
-    foxglove.log('/robot/path', PosesInFrame(timestamp=ts(t), frame_id='map', poses=list(path)),
-                 log_time=t)
+
+# ── Pose, odometry, IMU ──────────────────────────────────────────────────────
+# Raw instrumentation for writing your own odometry — no estimation here.
+#  /prediction/PredictPose ~112 Hz: predictPose = firmware dead reckoning (wheels + IMU yaw),
+#                                   pose = firmware's SLAM-corrected estimate. mm / rad.
+#  /imu/ImuSensor ~42 Hz: gyros = [yaw, tilt, tilt, -yaw] — gyros[0] is the integrated heading in rad,
+#                         CCW+, wrapped ±π (verified by spin test; predictPose.theta == gyros[0]); NOT a rate.
+#                         [1],[2] ≈ roll/pitch (±2°); accs is empty on this robot. notes/imu_odometry.md
+#  /wheel/WheelDistanceReport ~42 Hz: cumulative [left, right] wheel travel in mm.
+
+def _floats(b: bytes, o: int):
+    (n,) = struct.unpack_from('<I', b, o); o += 4
+    return list(struct.unpack_from(f'<{n}f', b, o)), o + 4 * n
+
+def _wrap(a: float) -> float:
+    return (a + math.pi) % (2 * math.pi) - math.pi
+
+path_predict: deque = deque(maxlen=PATH_LEN)
+_pose_last_tf = 0.0
+_pose_last_path = 0.0
+
+def on_predict(raw: bytes):
+    global _pose_last_tf, _pose_last_path
+    (ps, pn), o = _header(raw, 0)
+    dx, dy, dth = struct.unpack_from('<3f', raw, o); o += 12      # predictPose (dead reckoning)
+    (secs, nsecs), o = _header(raw, o)
+    x, y, th = struct.unpack_from('<3f', raw, o)                  # pose (corrected)
+    t = clock(secs, nsecs)
+    now = time.time()
+    if now - _pose_last_tf >= 0.05:                               # tf at 20 Hz
+        _pose_last_tf = now
+        foxglove.log('/tf', FrameTransforms(transforms=[
+            FrameTransform(timestamp=ts(t), parent_frame_id='map', child_frame_id='base_link',
+                           translation=Vector3(x=x / 1000, y=y / 1000, z=0.0), rotation=yaw_quat(th)),
+        ]), log_time=t)
+        foxglove.log('/robot/pose', {
+            'x_mm': round(x, 1), 'y_mm': round(y, 1), 'theta': round(th, 5),
+            'predict_x_mm': round(dx, 1), 'predict_y_mm': round(dy, 1), 'predict_theta': round(dth, 5),
+            'diff_mm': round(math.hypot(x - dx, y - dy), 1), 'diff_theta': round(_wrap(th - dth), 5),
+        }, log_time=t)
+    if now - _pose_last_path >= 0.2:                              # paths at 5 Hz
+        _pose_last_path = now
+        path.append(Pose(position=Vector3(x=x / 1000, y=y / 1000, z=0.0), orientation=yaw_quat(th)))
+        path_predict.append(Pose(position=Vector3(x=dx / 1000, y=dy / 1000, z=0.0), orientation=yaw_quat(dth)))
+        foxglove.log('/robot/path', PosesInFrame(timestamp=ts(t), frame_id='map', poses=list(path)), log_time=t)
+        foxglove.log('/robot/path_predict', PosesInFrame(timestamp=ts(t), frame_id='map',
+                                                         poses=list(path_predict)), log_time=t)
+
+
+_imu_prev = None
+
+def on_imu(raw: bytes):
+    global _imu_prev
+    (secs, nsecs), o = _header(raw, 0)
+    gyros, o = _floats(raw, o)
+    accs, o = _floats(raw, o)
+    t = clock(secs, nsecs)
+    msg = {'gyros': [round(g, 6) for g in gyros], 'accs': [round(a, 6) for a in accs]}
+    if gyros:
+        msg['yaw'] = round(gyros[0], 6)
+        msg['yaw_deg'] = round(math.degrees(gyros[0]), 3)
+        if _imu_prev and t > _imu_prev[0]:                        # yaw rate from successive samples
+            msg['yaw_rate_dps'] = round(math.degrees(_wrap(gyros[0] - _imu_prev[1])) / ((t - _imu_prev[0]) / 1e9), 2)
+        _imu_prev = (t, gyros[0])
+    foxglove.log('/imu', msg, log_time=t)
+
+
+_wheel_hist: deque = deque(maxlen=64)
+
+def on_wheels(raw: bytes):
+    (secs, nsecs), o = _header(raw, 0)
+    dist, o = _floats(raw, o)
+    if len(dist) < 2:
+        return
+    t = clock(secs, nsecs)
+    _wheel_hist.append((t, dist[0], dist[1]))
+    msg = {'left_mm': round(dist[0], 2), 'right_mm': round(dist[1], 2)}
+    old = next((h for h in _wheel_hist if t - h[0] <= 150_000_000), None)   # ~150 ms window
+    if old and t > old[0]:
+        dt = (t - old[0]) / 1e9
+        msg['left_mmps'] = round((dist[0] - old[1]) / dt, 1)
+        msg['right_mmps'] = round((dist[1] - old[2]) / dt, 1)
+    foxglove.log('/odom/wheels', msg, log_time=t)
 
 
 # ── Camera: hardware H.264 over ssh → foxglove.CompressedVideo ───────────────
@@ -433,7 +554,7 @@ def on_robot(raw: bytes):
 #   - bump / wheel-drop / cliff appearing → latched e-stop; stale telemetry → stop
 #   - /drive/estop and /drive/clear_estop services (Foxglove "Service Call" panel buttons)
 
-WHEELBASE_MM = 240.0                # measured, notes/driving.md
+WHEELBASE_MM = 228.0                # effective, from IMU-vs-wheel spin test (notes/imu_odometry.md)
 CMD_TIMEOUT_S = 0.4                 # set the Teleop panel's publish rate to ≥ 5 Hz (10 Hz recommended)
 
 class DriveControl(ServerListener):
@@ -540,9 +661,26 @@ class DriveControl(ServerListener):
 SOURCES = [
     ('/lds/Lds', 'lds/Lds', on_lds),
     ('/robot/Robot', 'robot/Robot', on_robot),
+    ('/prediction/PredictPose', 'prediction/PredictPose', on_predict),
+    ('/imu/ImuSensor', 'imu/ImuSensor', on_imu),
+    ('/wheel/WheelDistanceReport', 'wheel/WheelDistanceReport', on_wheels),
 ]
 
 def main():
+    import faulthandler
+    faulthandler.register(signal.SIGUSR1, all_threads=True)   # `kill -USR1 <pid>` dumps every thread's stack
+
+    # Shutdown must never hang. Handlers go in first (Ctrl-C during startup is caught too); the first
+    # Ctrl-C / SIGTERM requests a clean stop, a second one exits immediately. Cleanup runs under a hard
+    # deadline and the process ends with os._exit so Python never waits on stuck threads at exit.
+    stop = threading.Event()
+    def _on_signal(*_):
+        if stop.is_set():
+            os._exit(130)
+        stop.set()
+    signal.signal(signal.SIGINT, _on_signal)    # also when started as a background job (SIGINT ignored)
+    signal.signal(signal.SIGTERM, _on_signal)
+
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--port', type=int, default=8765)
     ap.add_argument('--record', metavar='FILE.mcap', help='also record everything to an MCAP file')
@@ -554,44 +692,42 @@ def main():
     ap.add_argument('--max-turn', type=float, default=0.8, metavar='RAD_S', help='max turn rate (default 0.8)')
     args = ap.parse_args()
 
-    ensure_master()
-    drive = None
-    server_kw = {}
-    if args.drive:
-        from foxglove import Capability
-        drive = DriveControl(telemetry, args.max_speed, args.max_turn)
-        drive.start()
-        server_kw = dict(capabilities=[Capability.ClientPublish, Capability.Services],
-                         supported_encodings=['json'], server_listener=drive,
-                         services=drive.services())
-    server = foxglove.start_server(name='deebot', host='127.0.0.1', port=args.port, **server_kw)
-    mcap = foxglove.open_mcap(args.record, allow_overwrite=True) if args.record else None
-    print(f'Foxglove server on ws://localhost:{args.port}' + (f', recording to {args.record}' if mcap else ''))
-
-    for topic, typ, handler in SOURCES:
-        threading.Thread(target=run_subscriber, args=(topic, typ, handler), daemon=True).start()
-    if not args.no_camera:
-        w, h = (int(v) for v in args.cam_size.lower().split('x'))
-        threading.Thread(target=run_camera, args=(w, h), daemon=True).start()
-
-    def _term(*_):
-        raise KeyboardInterrupt
-    signal.signal(signal.SIGTERM, _term)
-    signal.signal(signal.SIGINT, _term)       # also when started as a background job (SIGINT ignored)
-
+    drive = server = mcap = None
     try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        pass
+        ensure_master()
+        server_kw = {}
+        if args.drive and not stop.is_set():
+            from foxglove import Capability
+            drive = DriveControl(telemetry, args.max_speed, args.max_turn)
+            drive.start()
+            server_kw = dict(capabilities=[Capability.ClientPublish, Capability.Services],
+                             supported_encodings=['json'], server_listener=drive,
+                             services=drive.services())
+        server = foxglove.start_server(name='deebot', host='127.0.0.1', port=args.port, **server_kw)
+        mcap = foxglove.open_mcap(args.record, allow_overwrite=True) if args.record else None
+        print(f'Foxglove server on ws://localhost:{args.port}' + (f', recording to {args.record}' if mcap else ''))
+
+        for topic, typ, handler in SOURCES:
+            threading.Thread(target=run_subscriber, args=(topic, typ, handler), daemon=True).start()
+        if not args.no_camera:
+            w, h = (int(v) for v in args.cam_size.lower().split('x'))
+            threading.Thread(target=run_camera, args=(w, h), daemon=True).start()
+
+        while not stop.wait(0.5):
+            pass
     finally:
-        if drive:
-            drive.stop()                       # explicit zeros + unregister
-        if mcap:
-            mcap.close()
-        server.stop()
-        rw.cleanup_tunnels()
+        threading.Timer(3.0, lambda: (print('\ncleanup timed out — forcing exit'), os._exit(1))).start()
+        for step in (lambda: drive and drive.stop(),       # explicit wheel zeros + unregister — first
+                     lambda: mcap and mcap.close(),
+                     lambda: server and server.stop(),
+                     rw.cleanup_tunnels):
+            try:
+                step()
+            except Exception as e:                          # noqa: BLE001 — keep shutting down
+                print(f'  cleanup: {e!r}')
         print('\nstopped.')
+        sys.stdout.flush()
+        os._exit(0)
 
 
 if __name__ == '__main__':

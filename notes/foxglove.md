@@ -27,7 +27,7 @@ Suggested layout:
 | **3D** | Display frame `base_link` (robot-centred) or `map`; enable `/lidar`, `/robot/body`, `/robot/path`. `/lidar`: point size 4–5, Color mode *Color map*, Color by `range`; optional Decay time ~10 s in `map` to build a rough map while driving. Transforms → hide labels/axes to declutter. Leave `/robot/body` → Color empty (it would override the red/green states). |
 | **Image** | topic `/camera` (see `camera.md`) |
 | **Teleop** | only with `--drive`; settings in `driving.md` |
-| **Plot** / **Raw Messages** | `/robot/state` fields, e.g. `/robot/state.battery`, `/robot/state.motors_mA.L-wheel`; `/drive/status` |
+| **Plot** / **Raw Messages** | JSON topics don't appear in the 3D panel — plot fields, e.g. `/imu.yaw_deg`, `/odom/wheels.left_mmps`, `/robot/pose.diff_mm`, `/robot/state.battery`; `/drive/status` |
 | **Service Call** | `/drive/estop`, `/drive/clear_estop` with request `{}` (with `--drive`) |
 
 Save the layout from the layout dropdown (top right): Save as… / Export… to a JSON file.
@@ -38,7 +38,11 @@ Save the layout from the layout dropdown (top right): Save as… / Export… to 
 |---|---|---|---|---|
 | `/lidar` | `PointCloud` | `sensor_msgs/PointCloud2` | current scan; x, y, z(=0), range in metres; frame `lidar` | `lidar.md` |
 | `/tf` | `FrameTransforms` | `tf2_msgs/TFMessage` | `map → base_link`, `base_link → lidar` | |
-| `/robot/path` | `PosesInFrame` | `nav_msgs/Path` | last ~600 poses (~2 min) in `map` | |
+| `/robot/path` | `PosesInFrame` | `nav_msgs/Path` | firmware's corrected pose trail, last ~600 poses in `map` | `imu_odometry.md` |
+| `/robot/path_predict` | `PosesInFrame` | `nav_msgs/Path` | firmware's dead-reckoning trail (give it another colour) | `imu_odometry.md` |
+| `/robot/pose` | JSON | — | corrected + dead-reckoning pose (mm/rad) and their difference `diff_mm` / `diff_theta`; 20 Hz | `imu_odometry.md` |
+| `/imu` | JSON | — | raw `gyros[]` (`[0]` = integrated yaw rad), `yaw_deg`, derived `yaw_rate_dps`; ~42 Hz | `imu_odometry.md` |
+| `/odom/wheels` | JSON | — | cumulative `left_mm`/`right_mm`, per-wheel `*_mmps`; ~42 Hz | `imu_odometry.md` |
 | `/camera` | `CompressedVideo` (h264) | — | robot's hardware H.264, frame `camera`, ~30 fps | `camera.md` |
 | `/robot/body` | `SceneUpdate` | `visualization_msgs/MarkerArray` | robot outline, heading arrow, bumpers, cliff sensors, wheel drops, LDS turret, IR values — red when triggered; frame `base_link`, 10 Hz | `sensors.md` |
 | `/robot/state` | JSON | — | battery, charging, hazard, bump / cliff / wheel-drop, dirtbox / carpet / waterbox, motor currents (mA), IR ranges; 10 Hz | `sensors.md` |
@@ -48,7 +52,7 @@ Save the layout from the layout dropdown (top right): Save as… / Export… to 
 ## Frames
 
 ```
-map ──(robot pose from /lds/Lds ldsPose, mm→m)──▶ base_link ──(identity, offset unknown)──▶ lidar
+map ──(corrected pose from /prediction/PredictPose, mm→m, 20 Hz)──▶ base_link ──(identity, offset unknown)──▶ lidar
 ```
 
 - `map` — the firmware's own world frame.
@@ -64,6 +68,11 @@ map ──(robot pose from /lds/Lds ldsPose, mm→m)──▶ base_link ──(i
   subscribes once and shares it between the display (throttled to 10 Hz) and the `--drive` safety checks.
   Lidar ~115 KB/s; camera ~150 KB/s at 640x480.
 - **Reconnects:** each robot topic runs in its own thread and resubscribes after 2 s on failure; the
-  camera pipeline restarts likewise.
-- **Shutdown** (Ctrl-C or SIGTERM): closes the MCAP, stops the server, sends wheel zeros + unregisters
-  (`--drive`), kills SSH tunnels; the camera's robot-side watchdog frees `/dev/video0` within ~1 s.
+  camera pipeline restarts likewise. SSH tunnels are created one at a time under a lock and rebuilt if a
+  connection through them fails (concurrent creation used to leave a random topic stuck on
+  "Connection refused").
+- **Shutdown** (Ctrl-C or SIGTERM): wheel zeros + unregister (`--drive`) first, then closes the MCAP, stops
+  the server, kills SSH tunnels, under a 3 s hard deadline; a second Ctrl-C exits immediately. The camera's
+  robot-side watchdog frees `/dev/video0` within ~1 s. `kill -USR1 <pid>` dumps all thread stacks.
+- **Lidar stopping:** the firmware sometimes stops the LDS (cause unknown — idle timer?). `/lidar` then goes
+  silent; publishing `lds/ControlLds` `type: 0` (START) on `/lds/ControlLds` restarts it within ~2 s.
