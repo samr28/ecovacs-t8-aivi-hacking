@@ -46,6 +46,7 @@ mdsctl bumbee '{"todo":"QueryIotInfo"}'             # returns did, mid, resource
 ### rosnode
 ```sh
 mdsctl rosnode '{"todo":"rtctl", "cmd":"getBatteryInfo"}'
+# "setspeed" is recognised but is a no-op stub (returns immediately) — cannot drive wheels via mdsctl
 mdsctl rosnode '{"todo":"bigData","item":"cloud","status":"online","bssid":"...","mac":"...","rssi":...}'
 mdsctl rosnode '{"todo":"bigData","item":"network","status":"offline","reason":...}'
 ```
