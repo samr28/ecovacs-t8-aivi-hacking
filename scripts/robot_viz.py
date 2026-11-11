@@ -17,6 +17,13 @@ Topics served (all SI units — metres / radians, like ROS):
   /camera       foxglove.CompressedVideo  H.264 from the robot's hardware encoder, frame "camera"
                                        (ROS: foxglove_msgs/CompressedVideo; view in an Image panel)
 
+With --drive (opt-in, moves the robot):
+  /cmd_vel      ← geometry_msgs/Twist from Foxglove's Teleop panel (set its topic to /cmd_vel,
+                  publish rate 10 Hz, values ~0.1 m/s forward / ~0.5 rad/s turn)
+  /drive/status JSON: e-stop state, hazards, commanded and wheel speeds, battery
+  services      /drive/estop, /drive/clear_estop (std_srvs/Trigger-style; use the Service Call panel)
+  Don't run robot_teleop.py at the same time — both would publish wheel speeds.
+
 Frames:
   map        the robot firmware's own world frame (pose from /lds/Lds.ldsPose, mm → m)
   base_link  the robot body. x forward, y left, θ CCW-positive (verified with wheel tests and by
@@ -43,6 +50,8 @@ import foxglove
 from foxglove.messages import (CompressedVideo, FrameTransform, FrameTransforms, PackedElementField,
                                PackedElementFieldNumericType, PointCloud, Pose, PosesInFrame,
                                Quaternion, Timestamp, Vector3)
+
+from foxglove.websocket import ServerListener
 
 import robot_watch as rw            # SSH tunnel + TCPROS framing helpers
 from config import ROS_MASTER_PORT
@@ -269,6 +278,116 @@ def run_camera(w: int, h: int):
         time.sleep(2)
 
 
+# ── Driving from Foxglove (--drive) ──────────────────────────────────────────
+# Foxglove's Teleop panel publishes geometry_msgs/Twist (JSON) back to us (ClientPublish capability).
+# We turn (linear.x m/s, angular.z rad/s) into left/right wheel speeds and feed robot_teleop's
+# WheelPublisher (→ /wheel/SetWheelSpeed). Safety, same as robot_teleop.py:
+#   - deadman: no Twist for CMD_TIMEOUT_S → stop (the panel only publishes while a button is held)
+#   - bump / wheel-drop / cliff appearing → latched e-stop; stale telemetry → stop
+#   - /drive/estop and /drive/clear_estop services (Foxglove "Service Call" panel buttons)
+
+WHEELBASE_MM = 240.0                # measured, notes/driving.md
+CMD_TIMEOUT_S = 0.4                 # set the Teleop panel's publish rate to ≥ 5 Hz (10 Hz recommended)
+
+class DriveControl(ServerListener):
+    def __init__(self, max_speed_mmps: float, max_turn_radps: float):
+        import robot_teleop as rt
+        self.rt = rt
+        self.max_v, self.max_w = max_speed_mmps, max_turn_radps
+        self.v_mmps = self.w_radps = 0.0
+        self.last_cmd = 0.0
+        self.estop: str | None = None
+        self.prev_hz: str | None = None
+        self.channels: dict[int, str] = {}     # client channel id → topic
+
+    def start(self):
+        self.tel = self.rt.Telemetry(); self.tel.start()
+        self.pub = self.rt.WheelPublisher(); self.pub.start()
+        for _ in range(50):
+            if self.pub.connected():
+                break
+            time.sleep(0.1)
+        print(f'  drive: /wheel/SetWheelSpeed publisher, {self.pub.connected()} subscriber(s)')
+        threading.Thread(target=self._loop, daemon=True).start()
+
+    # Twist from the Teleop panel
+    def on_twist(self, msg: dict):
+        lin, ang = msg.get('linear', {}), msg.get('angular', {})
+        self.v_mmps = max(-self.max_v, min(self.max_v, float(lin.get('x', 0.0)) * 1000.0))
+        self.w_radps = max(-self.max_w, min(self.max_w, float(ang.get('z', 0.0))))
+        self.last_cmd = time.time()
+
+    def wheel_speeds(self) -> tuple[float, float]:
+        """Differential drive: v ± ω·B/2, scaled so neither wheel exceeds max speed. mm/s."""
+        half = self.w_radps * WHEELBASE_MM / 2
+        l, r = self.v_mmps - half, self.v_mmps + half
+        k = max(1.0, abs(l) / self.max_v, abs(r) / self.max_v)
+        return l / k, r / k
+
+    def _loop(self):
+        while True:
+            now = time.time()
+            hz = self.tel.hazard()
+            stale = hz == 'telemetry stale'
+            if hz and not stale and hz != self.prev_hz:
+                self.estop = hz                # latch on rising edge
+            self.prev_hz = hz
+            active = now - self.last_cmd < CMD_TIMEOUT_S
+            if active and not self.estop and not stale:
+                l, r = self.wheel_speeds()
+            else:
+                l = r = 0.0
+            self.pub.cmd = (l * self.rt.CMD_PER_MMPS, r * self.rt.CMD_PER_MMPS)
+            d = self.tel.d or {}
+            foxglove.log('/drive/status', {
+                'estop': self.estop or '', 'hazard': hz or '', 'active': bool(l or r),
+                'cmd_v_mmps': round(self.v_mmps if active else 0.0, 1),
+                'cmd_w_radps': round(self.w_radps if active else 0.0, 3),
+                'wheel_mmps': [round(l, 1), round(r, 1)],
+                'subscribers': self.pub.connected(), 'battery': d.get('battery'),
+            })
+            time.sleep(0.05)
+
+    def stop(self):
+        self.pub.shutdown()
+
+    # Foxglove server callbacks (ServerListener protocol)
+    def on_client_advertise(self, client, channel):
+        self.channels[channel.id] = channel.topic
+        print(f'  drive: client advertised {channel.topic} ({channel.schema_name}, {channel.encoding})')
+
+    def on_client_unadvertise(self, client, client_channel_id):
+        self.channels.pop(client_channel_id, None)
+        self.last_cmd = 0.0                    # stop immediately
+
+    def on_message_data(self, client, client_channel_id, data):
+        import json
+        if self.channels.get(client_channel_id) == '/cmd_vel':
+            try:
+                self.on_twist(json.loads(data))
+            except (ValueError, TypeError, AttributeError):
+                pass
+
+    def services(self):
+        import json
+        from foxglove import Schema, Service, ServiceSchema, MessageSchema
+        def schema(name, props):
+            return MessageSchema(encoding='json', schema=Schema(
+                name=name, encoding='jsonschema',
+                data=json.dumps({'type': 'object', 'properties': props}).encode()))
+        trig = ServiceSchema(name='std_srvs/Trigger', request=schema('std_srvs/Trigger_Request', {}),
+                             response=schema('std_srvs/Trigger_Response',
+                                             {'success': {'type': 'boolean'}, 'message': {'type': 'string'}}))
+        def estop(_req):
+            self.estop = 'manual e-stop'; self.last_cmd = 0.0
+            return json.dumps({'success': True, 'message': 'stopped'}).encode()
+        def clear(_req):
+            self.estop = None
+            return json.dumps({'success': True, 'message': 'cleared'}).encode()
+        return [Service(name='/drive/estop', schema=trig, handler=estop),
+                Service(name='/drive/clear_estop', schema=trig, handler=clear)]
+
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 SOURCES = [
@@ -281,10 +400,23 @@ def main():
     ap.add_argument('--record', metavar='FILE.mcap', help='also record everything to an MCAP file')
     ap.add_argument('--no-camera', action='store_true', help="don't stream the camera")
     ap.add_argument('--cam-size', default='640x480', metavar='WxH', help='camera resolution (default 640x480)')
+    ap.add_argument('--drive', action='store_true',
+                    help='accept geometry_msgs/Twist on /cmd_vel from the Foxglove Teleop panel and drive')
+    ap.add_argument('--max-speed', type=float, default=100, metavar='MM_S', help='max wheel speed (default 100)')
+    ap.add_argument('--max-turn', type=float, default=0.8, metavar='RAD_S', help='max turn rate (default 0.8)')
     args = ap.parse_args()
 
     ensure_master()
-    server = foxglove.start_server(name='deebot', host='127.0.0.1', port=args.port)
+    drive = None
+    server_kw = {}
+    if args.drive:
+        from foxglove import Capability
+        drive = DriveControl(args.max_speed, args.max_turn)
+        drive.start()
+        server_kw = dict(capabilities=[Capability.ClientPublish, Capability.Services],
+                         supported_encodings=['json'], server_listener=drive,
+                         services=drive.services())
+    server = foxglove.start_server(name='deebot', host='127.0.0.1', port=args.port, **server_kw)
     mcap = foxglove.open_mcap(args.record, allow_overwrite=True) if args.record else None
     print(f'Foxglove server on ws://localhost:{args.port}' + (f', recording to {args.record}' if mcap else ''))
 
@@ -305,6 +437,8 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
+        if drive:
+            drive.stop()                       # explicit zeros + unregister
         if mcap:
             mcap.close()
         server.stop()

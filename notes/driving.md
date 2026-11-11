@@ -45,6 +45,28 @@ float32[] speed        # [left, right]
 - Effective wheelbase ≈ (36.4 + 35.7) / 0.30 ≈ **240 mm**.
 - Wheel motor current ~50–80 mA while driving on hard floor (`/robot/Robot` currents types 5/6).
 
+### Driving from Foxglove
+
+`.venv/bin/python scripts/robot_viz.py --drive` (opt-in) also accepts `geometry_msgs/Twist` on **`/cmd_vel`**
+from Foxglove's **Teleop** panel (Foxglove WebSocket `ClientPublish` capability, JSON encoding) and converts it
+with differential-drive kinematics: `left/right = v ∓ ω·B/2`, B = 240 mm, scaled so neither wheel exceeds
+`--max-speed` (default 100 mm/s; `--max-turn` default 0.8 rad/s), then × 6 into wheel-command units.
+
+Teleop panel settings that matter (the defaults don't work well):
+
+| Setting | Value | Why |
+|---|---|---|
+| Topic | type `/cmd_vel` | the dropdown only lists server topics — type it |
+| Publish rate | 10 Hz | the bridge's deadman stops the robot after 0.4 s without a command |
+| Stop on release | On | sends a zero Twist immediately on release |
+| Up / Down | Linear X ±0.1 | m/s (default 1 m/s would just be clamped) |
+| Left / Right | Angular Z ±0.5 | rad/s |
+
+Safety is the same as `robot_teleop.py` (latched e-stop on new bump / wheel-drop / cliff, stop on stale
+telemetry, zeros + unregister on exit), plus Foxglove services `/drive/estop` and `/drive/clear_estop`
+(Service Call panel, request `{}`) and a JSON `/drive/status` topic. Don't run `robot_teleop.py` at the same
+time — both would publish wheel speeds.
+
 ---
 
 ## Dead ends (and why)
