@@ -63,7 +63,7 @@ These are the **command channels** — publish here to control the robot.
 
 | Topic | Type | Publisher | Notes |
 |-------|------|-----------|-------|
-| `/prediction/PredictPose` | `prediction/PredictPose` | `/node` | `predictPose` + `pose` (both `{header, x, y, theta}`). x/y in meters, theta in radians. |
+| `/prediction/PredictPose` | `prediction/PredictPose` | `/node` | `predictPose` + `pose` (both `{header, x, y, theta}`). x/y in millimetres, theta in radians. |
 | `/prediction/UpdatePose` | `prediction/UpdatePose` | `/node` | Pose update with interpolation flag |
 | `/prediction/PredictionOperation` | `prediction/PredictionOperation` | `/node` | Reset pose |
 | `/wheel/WheelDistanceReport` | `wheel/WheelDistanceReport` | `/node` | `header + float32[] wheelDistance` (left, right odometry — cumulative, mm, ~40 Hz) |

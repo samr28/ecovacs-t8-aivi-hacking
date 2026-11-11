@@ -4,6 +4,8 @@ Robot → Foxglove bridge (the start of our debug GUI).
 
 Subscribes to the robot's ROS topics over SSH tunnels (same TCPROS approach as robot_watch.py),
 converts them to Foxglove's ROS-style schemas, and serves them on a Foxglove WebSocket server.
+Docs: notes/foxglove.md (setup, panels, topics), notes/lidar.md, notes/sensors.md, notes/camera.md,
+notes/driving.md (--drive).
 
     .venv/bin/pip install foxglove-sdk           # once
     .venv/bin/python scripts/robot_viz.py        # then in Foxglove: Open connection →
@@ -16,6 +18,10 @@ Topics served (all SI units — metres / radians, like ROS):
   /robot/path   foxglove.PosesInFrame  recent trajectory in "map"      (ROS: nav_msgs/Path)
   /camera       foxglove.CompressedVideo  H.264 from the robot's hardware encoder, frame "camera"
                                        (ROS: foxglove_msgs/CompressedVideo; view in an Image panel)
+  /robot/body   foxglove.SceneUpdate   robot outline + bumpers / cliff / wheel-drop markers, IR values,
+                                       red when triggered; frame base_link  (ROS: visualization_msgs/MarkerArray)
+  /robot/state  JSON                   battery, charging, hazards, sensors, motor currents, IR ranges
+                                       (use Plot / Raw Messages / Indicator panels)
 
 With --drive (opt-in, moves the robot):
   /cmd_vel      ← geometry_msgs/Twist from Foxglove's Teleop panel (set its topic to /cmd_vel,
@@ -47,9 +53,11 @@ from collections import deque
 from urllib.parse import urlparse
 
 import foxglove
-from foxglove.messages import (CompressedVideo, FrameTransform, FrameTransforms, PackedElementField,
-                               PackedElementFieldNumericType, PointCloud, Pose, PosesInFrame,
-                               Quaternion, Timestamp, Vector3)
+from foxglove.messages import (ArrowPrimitive, Color, CompressedVideo, CubePrimitive, CylinderPrimitive,
+                               FrameTransform, FrameTransforms, LinePrimitive, LinePrimitiveLineType,
+                               PackedElementField, PackedElementFieldNumericType, Point3, PointCloud, Pose,
+                               PosesInFrame, Quaternion, SceneEntity, SceneUpdate, SpherePrimitive,
+                               TextPrimitive, Timestamp, Vector3)
 
 from foxglove.websocket import ServerListener
 
@@ -278,6 +286,145 @@ def run_camera(w: int, h: int):
         time.sleep(2)
 
 
+# ── Robot body, proximity sensors and state (/robot/Robot) ───────────────────
+# /robot/Robot arrives at ~50 Hz and ~20 KB (it embeds the lidar scan) ≈ 1 MB/s, so the bridge
+# subscribes to it ONCE and shares it: display (throttled to 10 Hz) + --drive safety (full rate).
+# The small per-sensor topics are too slow for safety (/onOffInfo/OnOffInfo ~1.4 Hz).
+#
+# Sensor POSITIONS below are approximate — the firmware gives indices, not locations. Body
+# diameter ≈ 350 mm. Cliff sensors: see CLIFF_POS (mapped from an underside photo).
+
+class Telemetry:
+    """Latest decoded /robot/Robot (without the lidar points) + robot_teleop's hazard() rules."""
+    def __init__(self):
+        self.d = None
+        self.t = 0.0
+
+    def hazard(self) -> str | None:
+        import robot_teleop as rt
+        return rt.Telemetry.hazard(self)        # same bump / wheel-drop / cliff / stale rules
+
+
+def decode_robot_state(raw: bytes) -> dict:
+    """Like robot_watch.decode but stops before the embedded lidar scan (cheap at 50 Hz)."""
+    b = rw.Buf(raw)
+    b.header()
+    pose = b.predict_pose()
+    battery, low_volt, on_charger, charge_state = b.u8(), b.u8(), b.u8(), b.u8()
+    motors = {}
+    for _ in range(b.u32()):
+        t = b.u8(); motors[rw.MOTOR_NAMES.get(t, str(t))] = b.u16()
+    b.header()
+    ranges = {}
+    for _ in range(b.u32()):
+        t = b.u8(); nv = b.u32()
+        ranges[rw.RANGE_NAMES.get(t, str(t))] = [b.u16() for _ in range(nv)]
+    onoff = {t: v for t, v in b.sensor_array()}
+    bump = {rw.BUMP_NAMES.get(t, str(t)): v for t, v in b.sensor_array()}
+    downin = [v for _, v in b.sensor_array()]
+    fall = [v for _, v in b.sensor_array()]
+    dirtbox = next((v for _, v in b.sensor_array()), 0)
+    carpet = next((v for _, v in b.sensor_array()), 0)
+    waterbox = next((v for _, v in b.sensor_array()), 0)
+    return dict(pose=pose['pose'], predict=pose['predict'], battery=battery, low_volt=low_volt,
+                on_charger=on_charger, charge_state=charge_state, motors=motors, ranges=ranges,
+                onoff=onoff, bump=bump, downin=downin, fall=fall, dirtbox=dirtbox, carpet=carpet,
+                waterbox=waterbox)
+
+
+telemetry = Telemetry()
+
+BODY_R = 0.175                                   # m
+# Cliff sensors downin[0..5]: (x, y) in base_link metres, measured from an underside photo
+# (body Ø 350 mm) and mapped by covering each window (2026-11-10); left/right are the robot's own
+# (top-down). Index names from onOffInfo/DownInValue. This model has FIVE cliff sensors: the two
+# windows either side of the front caster are ONE sensor (F, downin[1]); downin[2] (FRONT_RIGHT) is
+# an unpopulated slot of the shared message and always reads 0 → not drawn. (raw down_in has 5 values.)
+CLIFF_POS = [
+    (0.022, 0.158, True),     # c0  DOWNIN_LEFT        left side, outside the left wheel
+    (0.132, 0.0, True),       # c1  DOWNIN_FRONT       front, both windows beside the caster
+    (0.132, -0.038, False),   # c2  DOWNIN_FRONT_RIGHT not fitted on this model (always 0)
+    (0.022, -0.158, True),    # c3  DOWNIN_RIGHT       right side, outside the right wheel
+    (-0.074, 0.144, True),    # c4  DOWNIN_LEFT_BACK   back-left
+    (-0.074, -0.144, True),   # c5  DOWNIN_RIGHT_BACK  back-right
+]
+OK = Color(r=0.2, g=0.85, b=0.35, a=0.95)
+HIT = Color(r=1.0, g=0.15, b=0.15, a=1.0)
+BODY = Color(r=0.65, g=0.65, b=0.72, a=0.30)
+TEXT = Color(r=1.0, g=1.0, b=1.0, a=0.9)
+
+def _pose(x=0.0, y=0.0, z=0.0, yaw=0.0) -> Pose:
+    return Pose(position=Vector3(x=x, y=y, z=z), orientation=yaw_quat(yaw))
+
+def _arc(a0: float, a1: float, r: float, z: float, n: int = 12) -> list:
+    return [Point3(x=r * math.cos(math.radians(a0 + (a1 - a0) * i / n)),
+                   y=r * math.sin(math.radians(a0 + (a1 - a0) * i / n)), z=z) for i in range(n + 1)]
+
+def robot_scene(d: dict, t_ns: int) -> SceneUpdate:
+    bump, fall, cliff = d['bump'], d['fall'], d['downin']
+    lines = [  # bumper arcs: left covers front-left, right covers front-right
+        LinePrimitive(type=LinePrimitiveLineType.LineStrip, thickness=0.02, points=_arc(5, 85, BODY_R + 0.01, 0.05),
+                      color=HIT if bump.get('L') else OK),
+        LinePrimitive(type=LinePrimitiveLineType.LineStrip, thickness=0.02, points=_arc(-85, -5, BODY_R + 0.01, 0.05),
+                      color=HIT if bump.get('R') else OK),
+    ]
+    spheres = [SpherePrimitive(pose=_pose(x, y, 0.0), size=Vector3(x=0.03, y=0.03, z=0.03),
+                               color=HIT if (i < len(cliff) and cliff[i]) else OK)
+               for i, (x, y, fitted) in enumerate(CLIFF_POS) if fitted]
+    cubes = [CubePrimitive(pose=_pose(0.0, side * 0.115, 0.02), size=Vector3(x=0.07, y=0.025, z=0.04),
+                           color=HIT if (i < len(fall) and fall[i]) else OK)       # wheel-drop L, R
+             for i, side in enumerate((1, -1))]
+    cylinders = [
+        CylinderPrimitive(pose=_pose(0, 0, 0.045), size=Vector3(x=2 * BODY_R, y=2 * BODY_R, z=0.09),
+                          bottom_scale=1, top_scale=1, color=BODY),
+        CylinderPrimitive(pose=_pose(0, 0, 0.105), size=Vector3(x=0.08, y=0.08, z=0.03),     # LDS turret
+                          bottom_scale=1, top_scale=1, color=HIT if bump.get('LDS') else BODY),
+    ]
+    arrows = [ArrowPrimitive(pose=_pose(0, 0, 0.1), shaft_length=0.15, shaft_diameter=0.015,
+                             head_length=0.05, head_diameter=0.04, color=TEXT)]
+    rg = d['ranges']
+    side = rg.get('side_in', []) + [0, 0]           # [left, right] wall sensors: 0 = nothing, ~3800 = touching
+    texts = [
+        TextPrimitive(pose=_pose(BODY_R + 0.08, 0, 0.1), billboard=True, font_size=12, scale_invariant=True,
+                      color=TEXT, text=f"front IR {rg.get('front_buf', [])}"),
+        TextPrimitive(pose=_pose(0, BODY_R + 0.1, 0.1), billboard=True, font_size=12, scale_invariant=True,
+                      color=TEXT, text=f"wall IR L {side[0]}"),
+        TextPrimitive(pose=_pose(0, -(BODY_R + 0.1), 0.1), billboard=True, font_size=12, scale_invariant=True,
+                      color=TEXT, text=f"wall IR R {side[1]}"),
+        TextPrimitive(pose=_pose(-(BODY_R + 0.1), 0, 0.1), billboard=True, font_size=12, scale_invariant=True,
+                      color=TEXT, text=f"{d['battery']}%{' ⚡' if d['on_charger'] else ''}"),
+    ]
+    for i, (x, y, fitted) in enumerate(CLIFF_POS):
+        if fitted:
+            texts.append(TextPrimitive(pose=_pose(x, y, 0.04), billboard=True, font_size=9,
+                                       scale_invariant=True, color=TEXT, text=f'c{i}'))
+    return SceneUpdate(entities=[SceneEntity(
+        timestamp=ts(t_ns), frame_id='base_link', id='robot', frame_locked=True,
+        lines=lines, spheres=spheres, cubes=cubes, cylinders=cylinders, arrows=arrows, texts=texts)])
+
+
+_last_scene = 0.0
+
+def on_robot(raw: bytes):
+    global _last_scene
+    d = decode_robot_state(raw)
+    telemetry.d, telemetry.t = d, time.time()
+    now = time.time()
+    if now - _last_scene < 0.1:                  # display at 10 Hz
+        return
+    _last_scene = now
+    t = time.time_ns()
+    foxglove.log('/robot/body', robot_scene(d, t), log_time=t)
+    foxglove.log('/robot/state', {
+        'battery': d['battery'], 'low_voltage': d['low_volt'], 'on_charger': d['on_charger'],
+        'charge_state': rw.CHARGE_STATES.get(d['charge_state'], str(d['charge_state'])),
+        'hazard': telemetry.hazard() or '',
+        'bump': d['bump'], 'cliff': d['downin'], 'wheel_drop': d['fall'],
+        'dirtbox': d['dirtbox'], 'carpet': d['carpet'], 'waterbox': d['waterbox'],
+        'motors_mA': d['motors'], 'ranges': d['ranges'], 'onoff_raw': d['onoff'],
+    }, log_time=t)
+
+
 # ── Driving from Foxglove (--drive) ──────────────────────────────────────────
 # Foxglove's Teleop panel publishes geometry_msgs/Twist (JSON) back to us (ClientPublish capability).
 # We turn (linear.x m/s, angular.z rad/s) into left/right wheel speeds and feed robot_teleop's
@@ -290,9 +437,10 @@ WHEELBASE_MM = 240.0                # measured, notes/driving.md
 CMD_TIMEOUT_S = 0.4                 # set the Teleop panel's publish rate to ≥ 5 Hz (10 Hz recommended)
 
 class DriveControl(ServerListener):
-    def __init__(self, max_speed_mmps: float, max_turn_radps: float):
+    def __init__(self, tel, max_speed_mmps: float, max_turn_radps: float):
         import robot_teleop as rt
         self.rt = rt
+        self.tel = tel                         # shared, fed by the bridge's /robot/Robot subscription
         self.max_v, self.max_w = max_speed_mmps, max_turn_radps
         self.v_mmps = self.w_radps = 0.0
         self.last_cmd = 0.0
@@ -301,7 +449,6 @@ class DriveControl(ServerListener):
         self.channels: dict[int, str] = {}     # client channel id → topic
 
     def start(self):
-        self.tel = self.rt.Telemetry(); self.tel.start()
         self.pub = self.rt.WheelPublisher(); self.pub.start()
         for _ in range(50):
             if self.pub.connected():
@@ -392,6 +539,7 @@ class DriveControl(ServerListener):
 
 SOURCES = [
     ('/lds/Lds', 'lds/Lds', on_lds),
+    ('/robot/Robot', 'robot/Robot', on_robot),
 ]
 
 def main():
@@ -411,7 +559,7 @@ def main():
     server_kw = {}
     if args.drive:
         from foxglove import Capability
-        drive = DriveControl(args.max_speed, args.max_turn)
+        drive = DriveControl(telemetry, args.max_speed, args.max_turn)
         drive.start()
         server_kw = dict(capabilities=[Capability.ClientPublish, Capability.Services],
                          supported_encodings=['json'], server_listener=drive,

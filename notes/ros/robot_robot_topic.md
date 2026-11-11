@@ -3,7 +3,7 @@
 **Type:** `robot/Robot`  
 **Publisher:** `/node` (deebot process)  
 **MD5:** `5cfb7b142ed6323fe50812ffb59c30d4`  
-**Publishes:** continuously, even while docked
+**Publishes:** continuously, even while docked — **~50 Hz, ~20 KB per message (≈ 1 MB/s)** because every message embeds the latest lidar scan (the same scan repeats ~9× between 5.5 Hz lidar updates)
 
 This is the most useful single topic for monitoring robot state. It bundles pose,
 battery, charge state, motor currents, all sensors, and a full LIDAR scan into
